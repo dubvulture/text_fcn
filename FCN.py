@@ -176,7 +176,7 @@ def main(argv=None):
     summary_op = tf.summary.merge_all()
 
     print("Setting up image reader...")
-    train_records, va_records, test_records = coco_utils.read_dataset(FLAGS.coco_dir)
+    train_records, val_records, test_records = coco_utils.read_dataset(FLAGS.coco_dir)
     print(len(train_records))
     print(len(val_records))
     print(len(test_records))
@@ -185,8 +185,8 @@ def main(argv=None):
     print("Setting up dataset reader")
     if FLAGS.mode == 'train':
         train_dataset_reader = dataset.BatchDataset(train_records, FLAGS.coco_dir, opt)
-    if FLAGS.mode == 'train' or FLAGS.mode == 'visualize'
-    validation_dataset_reader = dataset.BatchDataset(val_records, FLAGS.coco_dir, opt)
+    if FLAGS.mode == 'train' or FLAGS.mode == 'visualize':
+        validation_dataset_reader = dataset.BatchDataset(val_records, FLAGS.coco_dir, opt)
 
     sess = tf.Session()
 

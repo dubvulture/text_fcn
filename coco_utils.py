@@ -17,18 +17,18 @@ URL = 'https://s3.amazonaws.com/cocotext/COCO_Text.zip'
 
 
 def read_dataset(directory):
-	"""
-	Returns train and validation dataset filenames list (no extension)
-	:param directory: folder where to find needed files
-	"""
-	maybe_download_and_extract(directory, URL, is_zipfile=True)
-	ct = cot.COCO_Text(os.path.join(directory, 'COCO_Text.json'))
-	
-	train = [ct.imgs[i]['file_name'][:-4] for i in ct.train if ct.imgToAnns[i] != []]
-	val = [ct.imgs[i]['file_name'][:-4] for i in ct.val if ct.imgToAnns[i] != []]
+    """
+    Returns train and validation dataset filenames list (no extension)
+    :param directory: folder where to find needed files
+    """
+    maybe_download_and_extract(directory, URL, is_zipfile=True)
+    ct = cot.COCO_Text(os.path.join(directory, 'COCO_Text.json'))
+    
+    train = [ct.imgs[i]['file_name'][:-4] for i in ct.train if ct.imgToAnns[i] != []]
+    val = [ct.imgs[i]['file_name'][:-4] for i in ct.val if ct.imgToAnns[i] != []]
     test = [ct.imgs[i]['file_name'][:-4] for i in ct.test]
 
-	return train, val, test
+    return train, val, test
 
 def maybe_download_and_extract(dir_path, url_name, is_tarfile=False, is_zipfile=False):
     if not os.path.exists(dir_path):
