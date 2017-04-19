@@ -1,3 +1,6 @@
 [submodule "coco-text"]
 	path = coco-text
-	url = https://github.com/andreasveit/coco-text
+	url = https://github.com/dubvulture/coco-text
+[submodule "coco_text"]
+	path = coco_text
+	url = https://github.com/dubvulture/coco_text
