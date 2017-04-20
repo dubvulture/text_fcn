@@ -72,14 +72,11 @@ class BatchDataset:
     def next_batch(self):
         batch_size = int(self.image_options['batch'])
 
-        if self.batch_offset == self.filenames.shape[0]:
+        if (self.batch_offset + batch_size) > self.filenames.shape[0]:
             # Epoch finished, shuffle filenames    
             np.random.shuffle(self.filenames)
             # Start next epoch
             self.batch_offset = 0
-        elif (self.batch_offset + batch_size) > self.filenames.shape[0]:
-            # last step & (batch_size % len) != 0
-            batch_size = self.filenames.shape[0] - self.batch_offset
 
         batch = slice(self.batch_offset, self.batch_offset+batch_size)
         self.batch_offset += batch_size
