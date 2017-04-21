@@ -14,7 +14,7 @@ FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_integer("batch_size", "8", "batch size for training")
 tf.flags.DEFINE_string("logs_dir", "logs/", "path to logs directory")
 tf.flags.DEFINE_string("coco_dir", "COCO_Text/", "path to dataset")
-tf.flags.DEFINE_float("learning_rate", "5e-5", "Learning rate for Adam Optimizer")
+tf.flags.DEFINE_float("learning_rate", "1e-4", "Learning rate for Adam Optimizer")
 tf.flags.DEFINE_bool('debug', "True", "Debug mode: True/ False")
 tf.flags.DEFINE_string('mode', "train", "Mode train/ visualize/ test")
 
@@ -151,8 +151,8 @@ def main(argv=None):
 
     pred_annotation, logits = inference(image, keep_probability)
     tf.summary.image("input_image", image, max_outputs=2)
-    tf.summary.image("ground_truth", tf.cast(annotation, tf.uint8), max_outputs=2)
-    tf.summary.image("pred_annotation", tf.cast(pred_annotation, tf.uint8), max_outputs=2)
+    tf.summary.image("ground_truth", tf.multiply(tf.cast(annotation, tf.uint8), 255), max_outputs=2)
+    tf.summary.image("pred_annotation", tf.multiply(tf.cast(pred_annotation, tf.uint8), 255), max_outputs=2)
     # Loss function
     squeezed = tf.squeeze(annotation, squeeze_dims=[3])
     # More weight on error where there is text in the groundtruth
