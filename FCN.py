@@ -20,7 +20,7 @@ tf.flags.DEFINE_string("model_dir", "Model_zoo/", "Path to vgg model mat")
 MODEL_URL = 'http://www.vlfeat.org/matconvnet/models/beta16/imagenet-vgg-verydeep-19.mat'
 
 
-MAX_ITERATION = 2000 #int(1e5 + 1)
+MAX_ITERATION = 2**32
 NUM_OF_CLASSES = 2
 IMAGE_SIZE = 256 #224
 
