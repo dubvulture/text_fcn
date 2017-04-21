@@ -1,6 +1,8 @@
 from __future__ import print_function
 import tensorflow as tf
 import numpy as np
+import os
+import scipy.misc as misc
 
 import TensorflowUtils as utils
 import coco_utils
@@ -9,10 +11,10 @@ import BatchDatasetReader as dataset
 from six.moves import xrange
 
 FLAGS = tf.flags.FLAGS
-tf.flags.DEFINE_integer("batch_size", "2", "batch size for training")
+tf.flags.DEFINE_integer("batch_size", "8", "batch size for training")
 tf.flags.DEFINE_string("logs_dir", "logs/", "path to logs directory")
 tf.flags.DEFINE_string("coco_dir", "COCO_Text/", "path to dataset")
-tf.flags.DEFINE_float("learning_rate", "1e-4", "Learning rate for Adam Optimizer")
+tf.flags.DEFINE_float("learning_rate", "5e-5", "Learning rate for Adam Optimizer")
 tf.flags.DEFINE_bool('debug', "True", "Debug mode: True/ False")
 tf.flags.DEFINE_string('mode', "train", "Mode train/ visualize/ test")
 
@@ -246,16 +248,19 @@ def main(argv=None):
     else:
         # FLAGS.mode == 'test'
         for i, fname in enumerate(test_records):
-            in_path = os.path.join(FLAGS.coco_dir, fname) 
-            image = misc.imread(in_path, mode='RGB')
-        
-            feed_dict = {image: image, keep_probability: 1.0}
-            pred = sess.run(pred_annotation, feed_dict=feed_dict)
-            print("evaluated image", fname)
+            in_path = os.path.join(FLAGS.coco_dir, 'images/', fname+'.jpg') 
+            in_image = misc.imread(in_path, mode='RGB')
+            in_image = np.expand_dims(in_image, axis=0)
 
-            output = np.squeeze(results.outputs, axis=3)
-            out_path = os.path.join(FLAGS.logs_dir, fname[:-4] + '_output.png')
-            misc.imsave(out_path, output)
+            feed_dict = {image: in_image, keep_probability: 1.0}
+            pred = sess.run(pred_annotation, feed_dict=feed_dict)
+            print("evaluated image\t" + fname)
+
+            output = np.squeeze(pred, axis=3)[0]
+            utils.save_image(
+                    coco_utils.to_mask(output),
+                    FLAGS.logs_dir,
+                    name=fname + '_output')
 
 
 if __name__ == "__main__":
