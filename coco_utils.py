@@ -52,7 +52,7 @@ def maybe_download_and_extract(dir_path, url_name, is_tarfile=False, is_zipfile=
                 zip_dir = zf.namelist()[0]
                 zf.extractall(dir_path)
 
-def to_gt(img):
+def to_mask(img):
     """
     :param img: B/W image, values in {0, 255}
     :return:    image in {0, 1}
@@ -60,9 +60,9 @@ def to_gt(img):
     img[img > 0] = 1
     return img.astype(np.int32)
 
-def to_mask(res):
+def to_ann(res):
     """
-    :param res: resulting image from to_gt, values in {0, 1}
+    :param res: resulting image from to_mask, values in {0, 1}
     :return:    image in {0, 255}
     """
     res[res > 0] = 255
@@ -135,8 +135,7 @@ def cropandresize(image, res_size, crop_size, left, top, interp='bicubic', mode=
 
     # (x,y) => (x,y,1)
     if len(image.shape)==2:
-        resized = np.expand_dims(resized, axis=3)
-        resized = to_gt(resized)
+        resized = np.expand_dims(to_mask(resized), axis=3)
 
     return resized
 

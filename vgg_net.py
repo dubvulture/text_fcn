@@ -3,7 +3,7 @@ import os
 import scipy
 import tensorflow as tf
 
-import TensorflowUtils as utils
+import tf_utils
 from coco_utils import maybe_download_and_extract
 
 
@@ -38,34 +38,34 @@ class VGG_NET(object):
         :param model_dir:   directory where to find the model .mat file
         """
         self.model_dir = model_dir
-        weights, mean_pixel = self._get_model_attr()
-        self.net = self._setup_net(placeholder, weights)
+        self.net = self._setup_net(placeholder, *self._get_model_attr())
 
-    def _setup_net(self, placeholder, weights):
+    def _setup_net(self, placeholder, weights, mean_pixel):
         """
-        Returns the network built with given weights
+        Returns the cnn built with given weights and normalized with mean_pixel
         """
         net = {}
+        placeholder -= mean_pixel
         for i, name in enumerate(VGG_NET.LAYERS):
             kind = name[:4]
             if kind == 'conv':
                 kernels, bias = weights[i][0][0][0][0]
                 # matconvnet: [width, height, in_channels, out_channels]
                 # tensorflow: [height, width, in_channels, out_channels]
-                kernels = utils.get_variable(
+                kernels = tf_utils.get_variable(
                     np.transpose(kernels, (1, 0, 2, 3)),
                     name=name + "_w")
-                bias = utils.get_variable(
+                bias = tf_utils.get_variable(
                     bias.reshape(-1),
                     name=name + "_b")
-                placeholder = utils.conv2d_basic(placeholder, kernels, bias)
+                placeholder = tf_utils.conv2d_basic(placeholder, kernels, bias)
             elif kind == 'relu':
                 placeholder = tf.nn.relu(placeholder, name=name)
-                utils.add_activation_summary(placeholder, collections=['train'])
+                tf_utils.add_activation_summary(placeholder, collections=['train'])
             elif kind == 'pool':
                 # VGG specifies max_pool... so why avg? Let's wait for response
-                #placeholder = utils.max_pool_2x2(placeholder)
-                placeholder = utils.avg_pool_2x2(placeholder)
+                placeholder = tf_utils.max_pool_2x2(placeholder)
+                #placeholder = tf_utils.avg_pool_2x2(placeholder)
             net[name] = placeholder
 
         return net
@@ -80,7 +80,7 @@ class VGG_NET(object):
         filename = VGG_NET.MODEL_URL.split("/")[-1]
         filepath = os.path.join(self.model_dir, filename)
         if not os.path.exists(filepath):
-            raise IOError("VGG Model not found!")
+            raise IOError("VGG Model not found.")
         
         data = scipy.io.loadmat(filepath)
         mean = data['normalization']['averageImage'][0,0]

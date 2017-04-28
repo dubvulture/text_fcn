@@ -2,11 +2,14 @@ from __future__ import print_function
 from six.moves import xrange
 
 import argparse
+import os
 import tensorflow as tf
 
-import BatchDatasetReader as dataset
+import dataset_reader as dataset
+from dataset_reader import BatchDataset
 import coco_utils
-from FCN_net import FCN
+from fcn_net import FCN
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--learning_rate', type=float, default='1e-04', help='learning rate for Adam Optimizer')
@@ -15,16 +18,39 @@ parser.add_argument('--batch_size', type=int, default=2, help='batch size for tr
 parser.add_argument('--keep_prob', type=float, default=0.85, help='keep probability with dropout')
 parser.add_argument('--logs_dir', default='logs/', help='path to logs directory')
 parser.add_argument('--coco_dir', default='COCO_Text/', help='path to dataset')
-parser.add_argument('--mode', required=True, choices=['train', 'val', 'test'])
+parser.add_argument('--mode', required=True, choices=['train', 'test', 'visualize'])
+parser.add_argument('--save_freq', type=int, default=500, help='save model every save_freq')
+parser.add_argument('--show_freq', type=int, default=20, help='trace train_loss every show_freq')
+parser.add_argument('--val_freq', type=int, default=500, help='trace val_loss every val_freq')
+
+
 args = parser.parse_args()
 
 
 if __name__ == '__main__':
-    if args.logs_dir is not None:
+    args.coco_dir = os.path.abspath(args.coco_dir) + '/'
+    args.logs_dir = os.path.abspath(args.logs_dir) + '/'
+
+    if args.coco_dir is None or not os.path.exists(args.coco_dir):
+        raise Exception("coco_dir does not exist")
+    
+    if not os.path.exists(args.logs_dir):
+        os.makedirs(args.logs_dir)
+    else:
+        # Get checkpoint from logs_dir if any
         ckpt = tf.train.get_checkpoint_state(args.logs_dir)
 
-    fcn = FCN(2, args.logs_dir, lr=args.learning_rate, checkpoint=ckpt)
+    # Setup FCN
+    fcn = FCN(
+        classes=2,
+        logs_dir=args.logs_dir,
+        lr=args.learning_rate,
+        checkpoint=ckpt,
+        show_freq=args.show_freq,
+        val_freq=args.val_freq,
+        save_freq=args.save_freq)
 
+    # get filenames
     train, val, test = coco_utils.read_dataset(args.coco_dir)
 
     if args.mode == 'train':
@@ -34,28 +60,15 @@ if __name__ == '__main__':
             'smax': 512,
             'size': args.image_size
         }
-        
-        train_set = dataset.BatchDataset(train, args.coco_dir, opt)
+        train_set = BatchDataset(train, args.coco_dir, opt)
         # We want to keep track of validation loss on a constant dataset
         # => no crops
-        opt = {
-            'batch': 1,
-            'smin': 192,
-            'smax': 512,
-            'size': 0
-        }
-        val_set = dataset.BatchDataset(val, args.coco_dir, opt)
-        # We pass val set to keep track of its loss
+        val_set = BatchDataset(val, args.coco_dir, None)
+        # We pass val_set to keep track of its loss
         fcn.train(train_set, val_set=val_set, keep_prob=args.keep_prob)
         
-    elif args.mode == 'val':
-        opt = {
-            'batch': args.batch_size,
-            'smin': 192,
-            'smax': 512,
-            'size': args.image_size
-        }
-        val_set = dataset.BatchDataset(val, args.coco_dir, opt)
+    elif args.mode == 'visualize':
+        val_set = BatchDataset(val, args.coco_dir, None)
         FCN.validate(val_set)
 
     elif args.mode == 'test':
@@ -64,4 +77,4 @@ if __name__ == '__main__':
 
 
 
-	
+    

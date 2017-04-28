@@ -54,11 +54,6 @@ def bias_variable(shape, name=None):
         return tf.get_variable(name, initializer=initial)
 
 
-def get_tensor_size(tensor):
-    from operator import mul
-    return reduce(mul, (d.value for d in tensor.get_shape()), 1)
-
-
 def conv2d_basic(x, W, bias):
     conv = tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding="SAME")
     return tf.nn.bias_add(conv, bias)
@@ -92,10 +87,6 @@ def max_pool_2x2(x):
 
 def avg_pool_2x2(x):
     return tf.nn.avg_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME")
-
-
-def local_response_norm(x):
-    return tf.nn.lrn(x, depth_radius=5, bias=2, alpha=1e-4, beta=0.75)
 
 
 def batch_norm(x, n_out, phase_train, scope='bn', decay=0.9, eps=1e-5):
