@@ -10,23 +10,34 @@ import numpy as np
 import scipy.misc as misc
 from six.moves import urllib
 
-import coco_text as cot
 
 
 URL = 'https://s3.amazonaws.com/cocotext/COCO_Text.zip'
 
 
-def read_dataset(directory):
+def read_dataset(ct):
     """
     Returns train and validation dataset filenames list (no extension)
-    :param directory: folder where to find needed files
+    :param ct: COCO_Text instance
     """
-    maybe_download_and_extract(directory, URL, is_zipfile=True)
-    ct = cot.COCO_Text(os.path.join(directory, 'COCO_Text.json'))
-    
-    train = [ct.imgs[i]['file_name'][:-4] for i in ct.train if ct.imgToAnns[i] != []]
-    val = [ct.imgs[i]['file_name'][:-4] for i in ct.val if ct.imgToAnns[i] != []]
-    test = [ct.imgs[i]['file_name'][:-4] for i in ct.test]
+    # legible annotations
+    valid_anns = [
+        ann for ann in ct.anns
+    ]
+
+    train = [
+        i for i in ct.train if any(
+                ann for ann in ct.imgToAnns[i]
+                if ct.anns[ann]['legibility'] == 'legible'
+        )
+    ]
+    val = [
+        i for i in ct.val if any(
+            ann for ann in ct.imgToAnns[i]
+                if ct.anns[ann]['legibility'] == 'legible'
+        )
+    ]
+    test = [i for i in ct.test]
 
     return train, val, test
 
@@ -67,84 +78,3 @@ def to_ann(res):
     """
     res[res > 0] = 255
     return res.astype(np.uint8)
-
-def randcrop(shape, size_min, size_max, mask=None, mask_lims=None):
-    height,width = shape[0:2]
-
-    if mask is not None:
-        # Prepare checks on the minimum number of pixels in a mask
-        # mask_side_original / resize_coefficient >= mask_side_minimum
-        # =>
-        # mask_side_actual * (size_final / size_initial) >= mask_side_minimum
-        # =>
-        # (mask_side_actual * size_final) / mask_side_minimum >= size_initial
-
-        # The check is applied by bounding the crop size to a maximum value that would
-        # guarantee a minum number of white pixels in the map, following the formula above
-        mask_min = 25
-        size_final = size_min
-        size_max = max(size_min,min(size_max, math.floor(math.sqrt(mask.sum()/255)*size_final/math.sqrt(mask_min))))
-
-        # Also bound the possible left/top to the bounding box of the provided mask
-        rmin, rmax, cmin, cmax = mask_lims or mask_limits(mask)
-
-    cropped_mask = np.zeros(1)
-    while(cropped_mask.sum() == 0):
-        size = random.randint(size_min, size_max)
-        if width>=size:
-            if mask is None:
-                left = random.randint(0, width-size)
-            else:
-                left = random.randint(max(0,cmin-size+2), min(width-size,cmax-2))
-        else:
-            # If the crop size is larger than one of the image dimensions,
-            # the offset (left or top) will be negative, indicating that padding will be used
-            left = -random.randint(0, size-width)
-        if height>=size:
-            if mask is None:
-                top = random.randint(0, height-size)
-            else:
-                top = random.randint(max(0,rmin-size+2), min(height-size,rmax-2))
-        else:
-            top = -random.randint(0, size-height)
-        # Crop the mask to check that it is not empty
-        if mask is not None and mask.sum() > 0:
-            cropped_mask = mask[max(0,top):min(height,top+size), max(0,left):min(width,left+size)]
-        else:
-            cropped_mask[0] = 1
-
-    return size, left, top
-
-def cropandresize(image, res_size, crop_size, left, top, interp='bicubic', mode=None):
-    # Pad
-    pad_top = max(0, -top)
-    pad_bottom = max(0, crop_size - (pad_top + image.shape[0]))
-    pad_left = max(0, -left)
-    pad_right = max(0, crop_size - (pad_left + image.shape[1]))
-    top = max(0,top)
-    left = max(0,left)
-    if len(image.shape)==3:
-        padded = np.pad(image, ((pad_top, pad_bottom), (pad_left, pad_right), (0,0)), 'constant')
-    else:
-        padded = np.pad(image, ((pad_top, pad_bottom), (pad_left, pad_right)), 'constant')
-
-    # Crop
-    cropped = padded[top:top+crop_size, left:left+crop_size]
-    # Resize
-    resized = misc.imresize(cropped, [res_size, res_size], interp=interp, mode=mode)
-
-    # (x,y) => (x,y,1)
-    if len(image.shape)==2:
-        resized = np.expand_dims(to_mask(resized), axis=3)
-
-    return resized
-
-def mask_limits(mask):
-    if type(mask) is np.ndarray and mask.sum() > 0:
-        rows = np.any(mask, axis=1)
-        cols = np.any(mask, axis=0)
-        rmin, rmax = np.where(rows)[0][[0, -1]]
-        cmin, cmax = np.where(cols)[0][[0, -1]]
-        return (rmin, rmax, cmin, cmax)
-    else:
-        return (0,0,0,0)

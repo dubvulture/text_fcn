@@ -37,6 +37,8 @@ class FCN(object):
             tf.float32, shape=[None, None, None, 3], name='image')
         self.annotation = tf.placeholder(
             tf.int32, shape=[None, None, None, 1], name='annotation')
+        self.weight = tf.placeholder(
+            tf.float32, shape=[None, None, None, 1], name='weight')
 
         self.prediction, self.logits = self._setup_net()
 
@@ -66,10 +68,11 @@ class FCN(object):
         """
         with self.sv.managed_session() as sess:
             while not self.sv.should_stop():
-                images, anns, _ = train_set.next_batch()
+                images, anns, weights, _ = train_set.next_batch()
                 feed = {
                     self.image: images,
                     self.annotation: anns,
+                    self.weight: weights,
                     self.keep_prob: keep_prob
                 }
                 sess.run(self.train_op, feed_dict=feed)
@@ -84,10 +87,11 @@ class FCN(object):
                     print('Step %d\tTrain_loss: %g' % (step, loss))
 
                 if (val_set is not None) and (step % self.val_freq == 0):
-                    images, anns, _ = val_set.next_batch()
+                    images, anns, weights, _ = val_set.next_batch()
                     feed = {
                         self.image: images,
                         self.annotation: anns,
+                        self.weight: weights,
                         self.keep_prob: 1.0
                     }
                     # no backpropagation
@@ -126,7 +130,7 @@ class FCN(object):
         """
         Run on images+annotations in order to save input & gt & prediction
         """
-        images, anns, filenames = dataset.get_random_batch()
+        images, anns, _, filenames = dataset.get_random_batch()
         feed = {
             self.image: images,
             self.annotation: anns,
@@ -166,14 +170,13 @@ class FCN(object):
         """
         Setup the loss function
         """
-        frac = 1 - tf.nn.zero_fraction(self.annotation)
-        weights = tf.squeeze(self.annotation, squeeze_dims=[3])
-        weights = tf.one_hot(weights, 1, on_value=1., off_value=frac)
         return tf.reduce_mean(
             tf.losses.sparse_softmax_cross_entropy(
                 logits=self.logits,
-                labels=tf.squeeze(self.annotation, squeeze_dims=[3]),
-                weights=weights))
+                labels=self.annotation,
+                weights=self.weight
+            )
+        )
 
     def _setup_net(self):
         """

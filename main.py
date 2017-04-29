@@ -5,8 +5,8 @@ import argparse
 import os
 import tensorflow as tf
 
-import dataset_reader as dataset
 from dataset_reader import BatchDataset
+from coco_text import COCO_Text
 import coco_utils
 from fcn_net import FCN
 
@@ -40,7 +40,7 @@ if __name__ == '__main__':
         # Get checkpoint from logs_dir if any
         ckpt = tf.train.get_checkpoint_state(args.logs_dir)
 
-    # Setup FCN
+    print("Setting up FCN...")
     fcn = FCN(
         classes=2,
         logs_dir=args.logs_dir,
@@ -50,25 +50,24 @@ if __name__ == '__main__':
         val_freq=args.val_freq,
         save_freq=args.save_freq)
 
-    # get filenames
-    train, val, test = coco_utils.read_dataset(args.coco_dir)
+    coco_utils.maybe_download_and_extract(args.coco_dir, coco_utils.URL, is_zipfile=True)
+    coco_text = COCO_Text(os.path.join(args.coco_dir, 'COCO_Text.json'))
+    train, val, test = coco_utils.read_dataset(coco_text)
 
     if args.mode == 'train':
         opt = {
             'batch': args.batch_size,
-            'smin': 192,
-            'smax': 512,
             'size': args.image_size
         }
-        train_set = BatchDataset(train, args.coco_dir, opt)
+        train_set = BatchDataset(train, args.coco_dir, coco_text, opt)
         # We want to keep track of validation loss on a constant dataset
         # => no crops
-        val_set = BatchDataset(val, args.coco_dir, None)
+        val_set = BatchDataset(val, args.coco_dir, coco_text, None)
         # We pass val_set to keep track of its loss
         fcn.train(train_set, val_set=val_set, keep_prob=args.keep_prob)
         
     elif args.mode == 'visualize':
-        val_set = BatchDataset(val, args.coco_dir, None)
+        val_set = BatchDataset(val, args.coco_dir, coco_text, None)
         FCN.validate(val_set)
 
     elif args.mode == 'test':
