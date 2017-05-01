@@ -1,6 +1,7 @@
-import numpy as np
 import os
-import scipy
+
+import numpy as np
+import scipy.io
 import tensorflow as tf
 
 import tf_utils

@@ -1,14 +1,16 @@
 from __future__ import print_function
 from six.moves import xrange
 
+import os
+
+import cv2
 import tensorflow as tf
 import numpy as np
-import os
-import scipy.misc as misc
 
 import coco_utils
 import tf_utils
 from vgg_net import VGG_NET
+
 
 
 class FCN(object):
@@ -105,55 +107,67 @@ class FCN(object):
                     self.sv.saver.save(sess, self.logs_dir + 'model.ckpt', step)
                     print('Step %d\tModel saved.' % step)
 
-    def test(self, filenames):
+    def test(self, filenames, directory):
         """
-        Run on images in self.coco_dir without their groundtruth
+        Run on images in directory without their groundtruth
         (hence this should be used only during validation/testing phase)
         :param filenames: 
         """
-        for i, fname in enumerate(filenames):
-            in_path = os.path.join(self.coco_dir, 'images/', fname+'.jpg')
-            in_image = misc.imread(in_path, mode='RGB')
-            in_image = np.expand_dims(in_image, axis=0)
+        with self.sv.managed_session() as sess:
+            for i, fname in enumerate(filenames):
+                in_path = os.path.join(directory, 'images/', fname)
+                in_image = cv2.imread(in_path + '.jpg')
+                in_image = np.expand_dims(in_image, axis=0)
 
-            feed = {self.image: in_image, keep_prob: 1.0}
-            pred = sess.run(self.prediction, feed_dict=feed)
-            print('Evaluated image\t' + fname)
+                feed = {self.image: in_image, self.keep_prob: 1.0}
+                pred = sess.run(self.prediction, feed_dict=feed)
+                print('Evaluated image\t' + fname)
 
-            output = np.squeeze(pred, axis=3)[0]
-            tf_utils.save_image(
-                coco_utils.to_mask(output),
-                self.logs_dir,
-                name=fname + '_output')
+                output = np.squeeze(pred, axis=3)[0]
+                tf_utils.save_image(
+                    coco_utils.to_ann(output),
+                    self.logs_dir,
+                    name=fname + '_output')
 
-    def visualize(self, dataset):
+    def visualize(self, vis_set):
         """
-        Run on images+annotations in order to save input & gt & prediction
+        Run on given images in order to save input & gt & prediction
         """
-        images, anns, _, filenames = dataset.get_random_batch()
-        feed = {
-            self.image: images,
-            self.annotation: anns,
-            self.keep_prob: 1.0
-        }
-        pred = sess.run(self.prediction, feed_dict=feed)
-        anns = np.squeeze(anns, axis=3)
+        with self.sv.managed_session() as sess:
+            while True:
+                images, anns, weights, coco_ids = vis_set.next_batch()
 
-        for itr in xrange(dataset.image_options['batch']):
-            tf_utils.save_image(
-                images[itr].astype(np.uint8),
-                self.logs_dir,
-                name='input_' + str(itr))
-            tf_utils.save_image(
-                coco_utils.to_mask(anns[itr]),
-                self.logs_dir,
-                name='gt_' + str(itr))
-            tf_utils.save_image(
-                coco_utils.to_mask(pred[itr]),
-                self.logs_dir,
-                name='pred_' + str(itr))
+                if vis_set.epoch != 1:
+                    # Just one iteration over all dataset's images
+                    break
 
-            print('Saved image: %d' % itr)
+                feed = {
+                    self.image: images,
+                    self.annotation: anns,
+                    self.keep_prob: 1.0
+                }
+                preds = sess.run(self.prediction, feed_dict=feed)
+                anns = np.squeeze(anns, axis=3)
+
+                for i in range(vis_set.image_options['batch']):
+                    tf_utils.save_image(
+                        (images[i] * 255).astype(np.uint8),
+                        self.logs_dir,
+                        name='%05d_input' % coco_ids[i])
+                    tf_utils.save_image(
+                        coco_utils.to_ann(anns[i]),
+                        self.logs_dir,
+                        name='%05d_gt' % coco_ids[i])
+                    tf_utils.save_image(
+                        coco_utils.to_ann(weights[i]),
+                        self.logs_dir,
+                        name='%05d_gt_wt' % coco_ids[i])
+                    tf_utils.save_image(
+                        coco_utils.to_ann(preds[i]),
+                        self.logs_dir,
+                        name='%05d_pred' % coco_ids[i])
+
+                    print('Saved image: %d' % coco_ids[i])
 
 
     def _training(self, lr, global_step):

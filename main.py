@@ -22,17 +22,21 @@ parser.add_argument('--mode', required=True, choices=['train', 'test', 'visualiz
 parser.add_argument('--save_freq', type=int, default=500, help='save model every save_freq')
 parser.add_argument('--show_freq', type=int, default=20, help='trace train_loss every show_freq')
 parser.add_argument('--val_freq', type=int, default=500, help='trace val_loss every val_freq')
-
+parser.add_argument('--id_list', help='text file containing images\' coco ids to visualize')
 
 args = parser.parse_args()
 
+if args.id_list == None and args.mode == 'visualize':
+    parser.error('--mode="visualize" requires --id_list')
+
+
 
 if __name__ == '__main__':
+    if not os.path.exists(args.coco_dir):
+        raise Exception("coco_dir does not exist")
+
     args.coco_dir = os.path.abspath(args.coco_dir) + '/'
     args.logs_dir = os.path.abspath(args.logs_dir) + '/'
-
-    if args.coco_dir is None or not os.path.exists(args.coco_dir):
-        raise Exception("coco_dir does not exist")
     
     if not os.path.exists(args.logs_dir):
         os.makedirs(args.logs_dir)
@@ -67,12 +71,14 @@ if __name__ == '__main__':
         fcn.train(train_set, val_set=val_set, keep_prob=args.keep_prob)
         
     elif args.mode == 'visualize':
-        val_set = BatchDataset(val, args.coco_dir, coco_text, None)
-        FCN.validate(val_set)
+        with open(args.id_list, 'rb') as f:
+            ids = [int(line) for line in f if line.strip() != '']
+        ids_set = BatchDataset(ids, args.coco_dir, coco_text, None)
+        fcn.visualize(ids_set)
 
     elif args.mode == 'test':
-        # We just pass the filenames
-        FCN.test(test)
+        # We just pass the ids
+        fcn.test(test, args.coco_dir)
 
 
 
