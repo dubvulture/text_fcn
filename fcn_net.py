@@ -20,8 +20,7 @@ class FCN(object):
                  logs_dir,
                  lr=1e-04,
                  checkpoint=None,
-                 show_freq=10,
-                 summ_freq=50,
+                 train_freq=10,
                  val_freq=500,
                  save_freq=500):
         """
@@ -29,8 +28,7 @@ class FCN(object):
         :param logs_dir: directory for logs
         :param lr: initial learning rate
         :param checkpoint: a CheckpointState from get_checkpoint_state
-        :param show_freq: trace train_loss every show_freq
-        :param summ_freq: save summaries every summ_freq
+        :param train_freq: trace train_loss every train_freq
         :param val_freq: trace val_loss every val_freq
         :param save_freq: save model every save_freq
         """
@@ -61,9 +59,9 @@ class FCN(object):
 
         self.sv = self._setup_supervisor(checkpoint)
 
-        self.show_freq = show_freq
-        self.val_freq = val_freq
+        self.train_freq = train_freq
         self.save_freq = save_freq
+        self.val_freq = val_freq
 
     def train(self, train_set, val_set=None, keep_prob=0.85):
         """
@@ -83,15 +81,13 @@ class FCN(object):
 
                 step = sess.run(self.sv.global_step)
 
-                if step % self.show_freq == 0:
-                    print('Step %d\tTrain_loss: %g' % (step, loss))
-
-                if step % self.summ_freq == 0
+                if step % self.train_freq == 0:
                     loss, summary = sess.run(
                         [self.loss_op, self.summ_train],
-                        feed_dict=feed)
+                        feed_dict=feed)   
                     self.sv.summary_computed(sess, summary, step)
-                    
+                    print('Step %d\tTrain_loss: %g' % (step, loss))
+
                 if (val_set is not None) and (step % self.val_freq == 0):
                     images, anns, weights, _ = val_set.next_batch()
                     feed = {
