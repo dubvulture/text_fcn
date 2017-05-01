@@ -50,7 +50,7 @@ if __name__ == '__main__':
         logs_dir=args.logs_dir,
         lr=args.learning_rate,
         checkpoint=ckpt,
-        show_freq=args.train_freq,
+        train_freq=args.train_freq,
         val_freq=args.val_freq,
         save_freq=args.save_freq)
 
