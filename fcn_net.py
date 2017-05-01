@@ -153,19 +153,19 @@ class FCN(object):
                     tf_utils.save_image(
                         (images[i] * 255).astype(np.uint8),
                         self.logs_dir,
-                        name='%05d_input' % coco_ids[i])
+                        name='input_%05d' % coco_ids[i])
                     tf_utils.save_image(
                         coco_utils.to_ann(anns[i]),
                         self.logs_dir,
-                        name='%05d_gt' % coco_ids[i])
+                        name='gt_%05d' % coco_ids[i])
                     tf_utils.save_image(
                         coco_utils.to_ann(weights[i]),
                         self.logs_dir,
-                        name='%05d_gt_wt' % coco_ids[i])
+                        name='wt_%05d' % coco_ids[i])
                     tf_utils.save_image(
                         coco_utils.to_ann(preds[i]),
                         self.logs_dir,
-                        name='%05d_pred' % coco_ids[i])
+                        name='pred_%05d' % coco_ids[i])
 
                     print('Saved image: %d' % coco_ids[i])
 

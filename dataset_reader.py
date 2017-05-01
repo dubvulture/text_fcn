@@ -54,7 +54,7 @@ class BatchDataset:
 
         if (self.batch_offset + batch_size) > self.coco_ids.shape[0]:
             # Epoch finished, shuffle filenames
-            epoch += 1
+            self.epoch += 1
             np.random.shuffle(self.coco_ids)
             # Start next epoch
             self.batch_offset = 0
