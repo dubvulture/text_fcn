@@ -19,6 +19,7 @@ parser.add_argument('--keep_prob', type=float, default=0.85, help='keep probabil
 parser.add_argument('--logs_dir', default='logs/', help='path to logs directory')
 parser.add_argument('--coco_dir', default='COCO_Text/', help='path to dataset')
 parser.add_argument('--mode', required=True, choices=['train', 'test', 'visualize'])
+parser.add_argument('--summ_freq', type=int, default=50, help='save summaries every summ_freq')
 parser.add_argument('--save_freq', type=int, default=500, help='save model every save_freq')
 parser.add_argument('--show_freq', type=int, default=20, help='trace train_loss every show_freq')
 parser.add_argument('--val_freq', type=int, default=500, help='trace val_loss every val_freq')

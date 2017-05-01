@@ -21,6 +21,7 @@ class FCN(object):
                  lr=1e-04,
                  checkpoint=None,
                  show_freq=10,
+                 summ_freq=50,
                  val_freq=500,
                  save_freq=500):
         """
@@ -29,6 +30,7 @@ class FCN(object):
         :param lr: initial learning rate
         :param checkpoint: a CheckpointState from get_checkpoint_state
         :param show_freq: trace train_loss every show_freq
+        :param summ_freq: save summaries every summ_freq
         :param val_freq: trace val_loss every val_freq
         :param save_freq: save model every save_freq
         """
@@ -82,12 +84,14 @@ class FCN(object):
                 step = sess.run(self.sv.global_step)
 
                 if step % self.show_freq == 0:
+                    print('Step %d\tTrain_loss: %g' % (step, loss))
+
+                if step % self.summ_freq == 0
                     loss, summary = sess.run(
                         [self.loss_op, self.summ_train],
                         feed_dict=feed)
                     self.sv.summary_computed(sess, summary, step)
-                    print('Step %d\tTrain_loss: %g' % (step, loss))
-
+                    
                 if (val_set is not None) and (step % self.val_freq == 0):
                     images, anns, weights, _ = val_set.next_batch()
                     feed = {
