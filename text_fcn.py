@@ -144,6 +144,7 @@ class text_fcn(object):
                     self.keep_prob: 1.0
                 }
                 preds = sess.run(self.prediction, feed_dict=feed)
+                preds = np.squeeze(preds, axis=3)
                 anns = np.squeeze(anns, axis=3)
 
                 for i in range(vis_set.image_options['batch']):

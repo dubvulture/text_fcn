@@ -40,6 +40,7 @@ if __name__ == '__main__':
     
     if not os.path.exists(args.logs_dir):
         os.makedirs(args.logs_dir)
+        ckpt = None
     else:
         # Get checkpoint from logs_dir if any
         ckpt = tf.train.get_checkpoint_state(args.logs_dir)
