@@ -8,7 +8,7 @@ import tensorflow as tf
 from dataset_reader import BatchDataset
 from coco_text import COCO_Text
 import coco_utils
-from fcn_net import FCN
+from text_fcn import text_fcn
 
 
 parser = argparse.ArgumentParser()
@@ -45,8 +45,7 @@ if __name__ == '__main__':
         ckpt = tf.train.get_checkpoint_state(args.logs_dir)
 
     print("Setting up FCN...")
-    fcn = FCN(
-        classes=2,
+    fcn = text_fcn(
         logs_dir=args.logs_dir,
         lr=args.learning_rate,
         checkpoint=ckpt,
