@@ -2,12 +2,15 @@ from __future__ import print_function
 from six.moves import xrange
 
 import argparse
+from datetime import datetime
 import os
+import subprocess
+
 import tensorflow as tf
 
-from dataset_reader import BatchDataset
 from coco_text import COCO_Text
 import coco_utils
+from dataset_reader import BatchDataset
 from text_fcn import text_fcn
 
 
@@ -29,6 +32,26 @@ args = parser.parse_args()
 if args.id_list == None and args.mode == 'visualize':
     parser.error('--mode="visualize" requires --id_list')
 
+
+def save_run():
+    """
+    Append current run git revision + python arguments to exp.lisp
+    :return: git revision string
+    """
+    git_rev = subprocess.Popen(
+        'git rev-parse --short HEAD',
+        shell=True,
+        stdout=subprocess.PIPE
+    ).stdout.read()[:-1]
+
+    print('Saving run to runs.sh - %s' % git_rev)
+    with open('runs.sh', 'a') as f:
+        f.write(datetime.now().strftime('# %H:%M - %d %b %y\n'))
+        f.write('# git checkout %s\n' % git_rev)
+        f.write('# python main.py')
+        for k, v in args._get_kwargs():
+            f.write('--%s=\'%s\' ' % (k, v))
+        f.write('\n# git checkout master\n\n')
 
 
 if __name__ == '__main__':
@@ -57,6 +80,8 @@ if __name__ == '__main__':
     coco_utils.maybe_download_and_extract(args.coco_dir, coco_utils.URL, is_zipfile=True)
     coco_text = COCO_Text(os.path.join(args.coco_dir, 'COCO_Text.json'))
     train, val, test = coco_utils.read_dataset(coco_text)
+
+    save_run()
 
     if args.mode == 'train':
         opt = {

@@ -1,7 +1,7 @@
 COCO_Text/
 logs/
 Model_zoo/
-
+runs.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
