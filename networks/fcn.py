@@ -11,8 +11,8 @@ def create_fcn(placeholder, keep_prob, classes):
     """
     with tf.variable_scope('inference'):
         vgg_net = create_vgg_net(placeholder)
-        conv_final = vgg_net['conv5_3']
-        output = tf_utils.avg_pool_2x2(conv_final)
+        conv_final = vgg_net['conv5_4']
+        output = tf_utils.max_pool_2x2(conv_final)
 
         conv_shapes = [
             [7, 7, 512, 4096],
