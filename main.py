@@ -19,7 +19,7 @@ parser.add_argument('--learning_rate', type=float, default='1e-04', help='learni
 parser.add_argument('--image_size', type=int, default=256, help='image size for training')
 parser.add_argument('--batch_size', type=int, default=2, help='batch size for training')
 parser.add_argument('--keep_prob', type=float, default=0.85, help='keep probability with dropout')
-parser.add_argument('--logs_dir', default='logs/', help='path to logs directory')
+parser.add_argument('--logs_dir', default='logs/temp/', help='path to logs directory')
 parser.add_argument('--coco_dir', default='COCO_Text/', help='path to dataset')
 parser.add_argument('--mode', required=True, choices=['train', 'test', 'visualize'])
 parser.add_argument('--save_freq', type=int, default=500, help='save model every save_freq')
@@ -81,9 +81,8 @@ if __name__ == '__main__':
     coco_text = COCO_Text(os.path.join(args.coco_dir, 'COCO_Text.json'))
     train, val, test = coco_utils.read_dataset(coco_text)
 
-    save_run()
-
     if args.mode == 'train':
+        save_run()
         opt = {
             'batch': args.batch_size,
             'size': args.image_size
