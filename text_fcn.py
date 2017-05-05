@@ -88,7 +88,7 @@ class text_fcn(object):
                     print('Step %d\tTrain_loss: %g' % (step, loss))
 
                 if ((step == max_steps) or ((val_set is not None) and
-                                            (step % self.val_freq == 0)):
+                                            (step % self.val_freq == 0))):
                     images, anns, weights, _ = val_set.next_batch()
                     feed = {
                         self.image: images,

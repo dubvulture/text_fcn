@@ -49,7 +49,7 @@ def save_run():
     with open('runs.sh', 'a') as f:
         f.write(datetime.now().strftime('# %H:%M - %d %b %y\n'))
         f.write('# git checkout %s\n' % git_rev)
-        f.write('# python main.py')
+        f.write('# python main.py ')
         for k, v in args._get_kwargs():
             f.write('--%s=\'%s\' ' % (k, v))
         f.write('\n# git checkout master\n\n')
