@@ -20,7 +20,7 @@ class text_fcn(object):
                  lr=1e-04,
                  checkpoint=None,
                  train_freq=10,
-                 val_freq=500,
+                 val_freq=0,
                  save_freq=500):
         """
         :param logs_dir: directory for logs
@@ -60,10 +60,12 @@ class text_fcn(object):
         self.save_freq = save_freq
         self.val_freq = val_freq
 
-    def train(self, train_set, val_set=None, keep_prob=0.85):
+    def train(self, train_set, val_set=None, keep_prob=0.85, max_steps=0):
         """
         :param train_set: training set (cropped images of same size)
         :param val_set: validation set (to keep track of its loss)
+        :param keep_prob: 1-dropout
+        :param max_steps: max steps to perform
         """
         with self.sv.managed_session() as sess:
             while not self.sv.should_stop():
@@ -78,14 +80,16 @@ class text_fcn(object):
 
                 step = sess.run(self.sv.global_step)
 
-                if step % self.train_freq == 0:
+                if (step == max_steps) or ((step % self.train_freq) == 0):
                     loss, summary = sess.run(
                         [self.loss_op, self.summ_train],
                         feed_dict=feed)   
                     self.sv.summary_computed(sess, summary, step)
                     print('Step %d\tTrain_loss: %g' % (step, loss))
 
-                if (val_set is not None) and (step % self.val_freq == 0):
+                if  ((step == max_steps) or ((val_set is not None) and
+                                            (self.val_freq > 0) and
+                                            (step % self.val_freq == 0))):
                     images, anns, weights, _ = val_set.next_batch()
                     feed = {
                         self.image: images,
@@ -100,9 +104,12 @@ class text_fcn(object):
                     self.sv.summary_computed(sess, summary, step)
                     print('Step %d\tValidation loss: %g' % (step, loss))
 
-                if step % self.save_freq == 0:
+                if (step == max_steps) or ((step % self.save_freq) == 0):
                     self.sv.saver.save(sess, self.logs_dir + 'model.ckpt', step)
                     print('Step %d\tModel saved.' % step)
+
+                if step == max_steps:
+                    break
 
     def test(self, filenames, directory):
         """
@@ -195,7 +202,7 @@ class text_fcn(object):
         Setup the summary writer and variables
         :param checkpoint: saved model if any
         """
-        saver = tf.train.Saver(max_to_keep=1)
+        saver = tf.train.Saver(max_to_keep=10)
         sv = tf.train.Supervisor(
             logdir=self.logs_dir,
             save_summaries_secs=0,

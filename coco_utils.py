@@ -22,11 +22,6 @@ def read_dataset(ct):
     Returns train and validation dataset filenames list (no extension)
     :param ct: COCO_Text instance
     """
-    # legible annotations
-    valid_anns = [
-        ann for ann in ct.anns
-    ]
-
     train = [
         i for i in ct.train if any(
                 ann for ann in ct.imgToAnns[i]

@@ -20,7 +20,7 @@ NO_BATCH_OPT = {
 
 class BatchDataset:
 
-    def __init__(self, coco_ids, coco_dir, ct, image_options=None):
+    def __init__(self, coco_ids, coco_dir, ct, image_options=None, pre_saved=False):
         """
         Intialize a generic file reader with batching for list of files
         :param coco_ids: list of images' coco ids
@@ -42,6 +42,11 @@ class BatchDataset:
             self.image_options = image_options
             self._read_images = self._batch_read
         print(self.image_options)
+
+        if pre_saved:
+            self._get_images = self._load_images
+        else:
+            self._get_images = self._gen_images
 
         self.images = None
         self.annotations = None
@@ -80,7 +85,7 @@ class BatchDataset:
         coco_ids = np.zeros((n), dtype=object)
 
         for i, coco_id in enumerate(self.coco_ids[pos]):
-            res = self._gen_images(coco_id)
+            res = self._get_images(coco_id)
             valid_anns = [
                 ann for ann in self.ct.imgToAnns[coco_id]
                 if self.ct.anns[ann]['legibility'] == 'legible'
@@ -104,7 +109,7 @@ class BatchDataset:
         """
         assert((pos.stop - pos.start) == 1)
         coco_id = self.coco_ids[pos][0]
-        image, annotation, weight = self._gen_images(coco_id)
+        image, annotation, weight = self._get_images(coco_id)
 
         # Add batch_dim + convert to floating point in [0,1]
         image = np.expand_dims(image, axis=0)
@@ -117,6 +122,7 @@ class BatchDataset:
 
     def _gen_images(self, coco_id):
         """
+        Generate images using self.ct datas
         :param coco_id: image's coco id
         :return: image, its groundtruth w/o illegibles and its weights
         """
@@ -138,3 +144,20 @@ class BatchDataset:
                 cv2.fillConvexPoly(weight, poly, 0.0)
 
         return [image, annotation, weight]
+
+    def _load_images(self, coco_id):
+        """
+        Load images already saved on the disk
+        """
+        fname = 'COCO_train2014_%012d.png' % coco_id
+        image = cv2.imread(
+            os.path.join(self.coco_dir, 'subset_validation/images/', fname),
+        ).astype(np.float32) / 255.
+        ann = cv2.imread(
+            os.path.join(self.coco_dir, 'subset_validation/anns/', fname),
+        ).astype(np.int32) // 255
+        weight = cv2.imread(
+            os.path.join(self.coco_dir, 'subset_validation/weights', fname),
+        ).astype(np.float32) / 255.
+
+        return [image, ann, weight]

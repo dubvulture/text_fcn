@@ -18,13 +18,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--learning_rate', type=float, default='1e-04', help='learning rate for Adam Optimizer')
 parser.add_argument('--image_size', type=int, default=256, help='image size for training')
 parser.add_argument('--batch_size', type=int, default=2, help='batch size for training')
+parser.add_argument('--max_steps', type=int, default=0, help='max steps to perform, 0 for infinity')
 parser.add_argument('--keep_prob', type=float, default=0.85, help='keep probability with dropout')
 parser.add_argument('--logs_dir', default='logs/temp/', help='path to logs directory')
 parser.add_argument('--coco_dir', default='COCO_Text/', help='path to dataset')
 parser.add_argument('--mode', required=True, choices=['train', 'test', 'visualize'])
 parser.add_argument('--save_freq', type=int, default=500, help='save model every save_freq')
 parser.add_argument('--train_freq', type=int, default=20, help='trace train_loss every train_freq')
-parser.add_argument('--val_freq', type=int, default=500, help='trace val_loss every val_freq')
+parser.add_argument('--val_freq', type=int, default=0, help='trace val_loss every val_freq')
 parser.add_argument('--id_list', help='text file containing images\' coco ids to visualize')
 
 args = parser.parse_args()
@@ -88,11 +89,14 @@ if __name__ == '__main__':
             'size': args.image_size
         }
         train_set = BatchDataset(train, args.coco_dir, coco_text, opt)
-        # We want to keep track of validation loss on a constant dataset
-        # => no crops
-        val_set = BatchDataset(val, args.coco_dir, coco_text, None)
+        # We want to keep track of validation loss on an almost constant dataset
+        # => load previously saved images/gt/weights
+        val_set = None
+        if args.val_freq > 0:
+            val_set = BatchDataset(val, args.coco_dir, coco_text, opt, pre_saved=True)
+
         # We pass val_set to keep track of its loss
-        fcn.train(train_set, val_set=val_set, keep_prob=args.keep_prob)
+        fcn.train(train_set, val_set=val_set, keep_prob=args.keep_prob, max_steps=args.max_steps)
         
     elif args.mode == 'visualize':
         with open(args.id_list, 'rb') as f:
