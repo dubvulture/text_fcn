@@ -117,10 +117,14 @@ def crop_resize(images, window, size):
     pad = [((0,0),), (), ()]
     interp = [cv2.INTER_CUBIC, cv2.INTER_NEAREST, cv2.INTER_NEAREST]
     dsize = (size, size)
+    value = [0.0, 0.0, 1.0]
 
     for i in xrange(3):
         images[i] = images[i][window['slice']]
-        images[i] = np.pad(images[i], window['pad'] + pad[i], 'constant')
+        images[i] = np.pad(images[i],
+                           window['pad'] + pad[i],
+                           'constant',
+                           constant_values=value[i])
         images[i] = cv2.resize(images[i], dsize, interpolation=interp[i])
 
     return images

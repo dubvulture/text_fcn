@@ -1,11 +1,13 @@
-from __future__ import print_function
+from __future__ import division, print_function
 from six.moves import xrange
 
 import argparse
 from datetime import datetime
+import json
 import os
 import subprocess
 
+import cv2
 import tensorflow as tf
 
 from coco_text import COCO_Text
@@ -108,6 +110,79 @@ if __name__ == '__main__':
         # We just pass the ids
         fcn.test(test, args.coco_dir)
 
+    elif args.mode == 'coco':
+        # After NN extract bboxes and evaluate with coco_text
+        fcn.test(, args.coco_dir)
+        coco_pipe(coco_text, fnames)
 
 
-    
+
+
+def coco_pipe(coco_text):
+    """
+    :param coco_text: COCO_Text instance
+    """
+    fnames = os.listdir(os.path.join(self.logs_dir, 'test/'))
+    for fname in filenames:
+        image = cv2.imread(fname)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # image[image > 0] = 255 (this should not be needed)
+        bboxes, scores = get_bboxes(image)
+        coco_id = int(fname[20:-11])
+
+        jsonarr = []
+
+        for i in xrange(np.size(bboxes)):
+            jsonarr.append({
+                'utf8_string': "null",
+                'image_id': coco_id,
+                'bbox': bboxex[i],
+                "score": scores[i]
+            })
+
+        with open(os.path.join(self.logs_dir,
+                               'results.json'), 'w') as stream:
+            json.dumps(jsonarr, stream)
+
+def get_bboxes(image):
+    """
+    Return bounding boxes found and their accuracy score (TBD)
+    :param image: B/W image (values in {0, 255})
+    """
+    from scipy.ndimage.measurements import find_objects
+    from scipy.ndimage.measurements import label
+    from scipy.ndimage.measurements import labeled_comprehension as extract_feature
+    from scipy.ndimage.morphology import binary_closing as closing
+
+    MIN_AREA = 32
+    X = 3
+    DIL = (3,3)
+    ONES = np.ones(DIL, dtype=np.uint8)
+
+    # pad image in order to prevent closing "constriction"
+    output = np.pad(image, (DIL, DIL), 'constant')
+    output = closing(output, structure=ONES, iterations=3).astype(np.uint8)
+    # remove padding
+    output = output[X:-X, X:-X]
+    labels, num = label(output, structure=ONES)
+    areas = extract_feature(output, labels, range(1, num+1), np.sum, np.int32, 0)
+ 
+    for i in xrange(num):
+        if areas[i] < MIN_AREA:
+            labels[labels == i+1] = 0
+ 
+    objs = find_objects(labels)
+     
+    bboxes = np.array([
+        (obj[1].start, obj[1].stop, obj[0].start, obj[0].stop)
+        for obj in objs if obj is not None
+    ])
+    # count white pixels inside the current bbox
+    area = lambda i, b: np.count_nonzero(i:[b[0]:b[1], b[2]:b[3]])
+    # score as foreground / bbox_area
+    scores = np.array([
+        area(image, bbox) / np.multiply(bbox[[3,1]] - bbox[[2,0]])
+        for bbox in bboxes
+    ])
+     
+    return bboxes, scores

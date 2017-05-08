@@ -135,9 +135,13 @@ class text_fcn(object):
                 print('Evaluated image\t' + fname)
 
                 output = np.squeeze(pred, axis=3)[0]
+                out_dir = os.path.join(self.logs_dir, 'output/')
+                if not os.path.exists(out_dir):
+                    os.makedirs(out_dir)
+
                 tf_utils.save_image(
                     (output * 255).astype(np.uint8),
-                    self.logs_dir,
+                    out_dir,
                     name=fname + '_output')
 
     def visualize(self, vis_set):
@@ -164,18 +168,22 @@ class text_fcn(object):
                 preds = np.squeeze(preds, axis=3)
                 anns = np.squeeze(anns, axis=3)
 
+                out_dir = os.path.join(self.logs_dir, 'visualize/')
+                if not os.path.exists(out_dir):
+                    os.makedirs(out_dir)
+
                 for i in range(vis_set.image_options['batch']):
                     tf_utils.save_image(
                         (images[i] * 255).astype(np.uint8),
-                        self.logs_dir,
+                        out_dir,
                         name='input_%05d' % coco_ids[i])
                     tf_utils.save_image(
                         (anns[i] * 255).astype(np.uint8),
-                        self.logs_dir,
+                        out_dir,
                         name='gt_%05d' % coco_ids[i])
                     tf_utils.save_image(
                         (preds[i] * 255).astype(np.uint8),
-                        self.logs_dir,
+                        out_dir,
                         name='pred_%05d' % coco_ids[i])
 
                     print('Saved image: %d' % coco_ids[i])
