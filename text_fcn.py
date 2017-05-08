@@ -70,6 +70,9 @@ class text_fcn(object):
         with self.sv.managed_session() as sess:
             while not self.sv.should_stop():
                 images, anns, weights, _ = train_set.next_batch()
+                # Transform to match NN inputs
+                images = image.astype(np.float32) / 255.
+                anns = anns.astype(np.int32) // 255
                 feed = {
                     self.image: images,
                     self.annotation: anns,
@@ -87,9 +90,11 @@ class text_fcn(object):
                     self.sv.summary_computed(sess, summary, step)
                     print('Step %d\tTrain_loss: %g' % (step, loss))
 
-                if ((step == max_steps) or ((val_set is not None) and
-                                            (step % self.val_freq == 0))):
+                if ((val_set is not None) and (self.val_freq > 0) and ((step % self.val_freq == 0) or (step == max_steps))):
                     images, anns, weights, _ = val_set.next_batch()
+                    # Transform to match NN inputs
+                    images = image.astype(np.float32) / 255.
+                    anns = anns.astype(np.int32) // 255
                     feed = {
                         self.image: images,
                         self.annotation: anns,
@@ -121,6 +126,7 @@ class text_fcn(object):
                 in_path = os.path.join(directory, 'images/', fname)
                 in_image = cv2.imread(in_path + '.jpg')
                 in_image = np.expand_dims(in_image, axis=0)
+                in_image = in_image.astype(np.float32) / 255.
 
                 feed = {self.image: in_image, self.keep_prob: 1.0}
                 pred = sess.run(self.prediction, feed_dict=feed)
@@ -128,7 +134,7 @@ class text_fcn(object):
 
                 output = np.squeeze(pred, axis=3)[0]
                 tf_utils.save_image(
-                    coco_utils.to_ann(output),
+                    (output * 255).astype(np.uint8),
                     self.logs_dir,
                     name=fname + '_output')
 
@@ -139,6 +145,9 @@ class text_fcn(object):
         with self.sv.managed_session() as sess:
             while True:
                 images, anns, weights, coco_ids = vis_set.next_batch()
+                # Transform to match NN inputs
+                images = image.astype(np.float32) / 255.
+                anns = anns.astype(np.int32) // 255
 
                 if vis_set.epoch != 1:
                     # Just one iteration over all dataset's images
@@ -159,15 +168,11 @@ class text_fcn(object):
                         self.logs_dir,
                         name='input_%05d' % coco_ids[i])
                     tf_utils.save_image(
-                        coco_utils.to_ann(anns[i]),
+                        (anns[i] * 255).astype(np.uint8),
                         self.logs_dir,
                         name='gt_%05d' % coco_ids[i])
                     tf_utils.save_image(
-                        coco_utils.to_ann(weights[i]),
-                        self.logs_dir,
-                        name='wt_%05d' % coco_ids[i])
-                    tf_utils.save_image(
-                        coco_utils.to_ann(preds[i]),
+                        (preds[i] * 255).astype(np.uint8),
                         self.logs_dir,
                         name='pred_%05d' % coco_ids[i])
 

@@ -12,6 +12,7 @@ import tensorflow as tf
 from coco_utils import maybe_download_and_extract
 
 
+
 def save_image(image, save_dir, name, mean=None):
     """
     Save image by unprocessing if mean given else just save

@@ -79,7 +79,7 @@ class BatchDataset:
         n = pos.stop - pos.start
         size = self.image_options['size']
 
-        images = np.zeros((n, size, size, 3), dtype=np.float32)
+        images = np.zeros((n, size, size, 3), dtype=np.uint8)
         annotations = np.zeros((n, size, size, 1), dtype=np.uint8)
         weights = np.zeros((n, size, size, 1), dtype=np.float32)
         coco_ids = np.zeros((n), dtype=object)
@@ -129,8 +129,8 @@ class BatchDataset:
         fname = self.ct.imgs[coco_id]['file_name']
         image = cv2.imread(
             os.path.join(self.coco_dir, 'images/', fname),
-        ).astype(np.float32) / 255.
-        annotation = np.zeros(image.shape[:-1], np.uint8)
+        )
+        annotation = np.zeros(image.shape[:-1], dtype=np.uint8)
         weight = np.ones(image.shape[:-1], np.float32)
 
         for ann in self.ct.imgToAnns[coco_id]:
@@ -138,7 +138,7 @@ class BatchDataset:
 
             if self.ct.anns[ann]['legibility'] == 'legible':
                 # draw only legible bbox/polygon
-                cv2.fillConvexPoly(annotation, poly, 1)
+                cv2.fillConvexPoly(annotation, poly, 255)
             else:
                 # 0 weight if it is illegible
                 cv2.fillConvexPoly(weight, poly, 0.0)
@@ -151,13 +151,11 @@ class BatchDataset:
         """
         fname = 'COCO_train2014_%012d.png' % coco_id
         image = cv2.imread(
-            os.path.join(self.coco_dir, 'subset_validation/images/', fname),
-        ).astype(np.float32) / 255.
+            os.path.join(self.coco_dir, 'subset_validation/images/', fname))
         ann = cv2.imread(
-            os.path.join(self.coco_dir, 'subset_validation/anns/', fname),
-        ).astype(np.int32) // 255
+            os.path.join(self.coco_dir, 'subset_validation/anns/', fname))
         weight = cv2.imread(
-            os.path.join(self.coco_dir, 'subset_validation/weights', fname),
+            os.path.join(self.coco_dir, 'subset_validation/weights', fname)
         ).astype(np.float32) / 255.
 
         return [image, ann, weight]

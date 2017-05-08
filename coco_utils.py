@@ -60,14 +60,6 @@ def maybe_download_and_extract(dir_path, url_name, is_tarfile=False, is_zipfile=
                 zip_dir = zf.namelist()[0]
                 zf.extractall(dir_path)
 
-def to_ann(res):
-    """
-    :param res: groundtruth mask, values in {0, 1}
-    :return:    image in {0, 255}
-    """
-    res[res > 0] = 255
-    return res.astype(np.uint8)
-
 def get_window(shape, annotation):
     """
     :param shape: image shape (used as boundaries)
