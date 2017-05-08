@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
     elif args.mode == 'coco':
         # After NN extract bboxes and evaluate with coco_text
-        fcn.test(, args.coco_dir)
+        fcn.test(test, args.coco_dir)
         coco_pipe(coco_text, fnames)
 
 
@@ -178,7 +178,7 @@ def get_bboxes(image):
         for obj in objs if obj is not None
     ])
     # count white pixels inside the current bbox
-    area = lambda i, b: np.count_nonzero(i:[b[0]:b[1], b[2]:b[3]])
+    area = lambda i, b: np.count_nonzero(i[b[0]:b[1], b[2]:b[3]])
     # score as foreground / bbox_area
     scores = np.array([
         area(image, bbox) / np.multiply(bbox[[3,1]] - bbox[[2,0]])
