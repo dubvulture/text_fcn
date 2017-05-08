@@ -90,7 +90,9 @@ class text_fcn(object):
                     self.sv.summary_computed(sess, summary, step)
                     print('Step %d\tTrain_loss: %g' % (step, loss))
 
-                if ((val_set is not None) and (self.val_freq > 0) and ((step % self.val_freq == 0) or (step == max_steps))):
+                if ((val_set is not None) and (self.val_freq > 0) and
+                        ((step % self.val_freq) or (step == max_steps))):
+                    # Trace validition loss
                     images, anns, weights, _ = val_set.next_batch()
                     # Transform to match NN inputs
                     images = image.astype(np.float32) / 255.
@@ -145,14 +147,14 @@ class text_fcn(object):
         with self.sv.managed_session() as sess:
             while True:
                 images, anns, weights, coco_ids = vis_set.next_batch()
-                # Transform to match NN inputs
-                images = image.astype(np.float32) / 255.
-                anns = anns.astype(np.int32) // 255
 
                 if vis_set.epoch != 1:
                     # Just one iteration over all dataset's images
                     break
 
+                # Transform to match NN inputs
+                images = image.astype(np.float32) / 255.
+                anns = anns.astype(np.int32) // 255
                 feed = {
                     self.image: images,
                     self.annotation: anns,
@@ -197,9 +199,7 @@ class text_fcn(object):
             tf.losses.sparse_softmax_cross_entropy(
                 logits=self.logits,
                 labels=self.annotation,
-                weights=self.weight
-            )
-        )
+                weights=self.weight))
 
     def _setup_supervisor(self, checkpoint):
         """
