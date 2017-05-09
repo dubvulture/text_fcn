@@ -8,9 +8,13 @@ import os
 import subprocess
 
 import cv2
+from scipy.ndimage.measurements import find_objects
+from scipy.ndimage.measurements import label
+from scipy.ndimage.measurements import labeled_comprehension as extract_feature
+from scipy.ndimage.morphology import binary_closing as closing
 import tensorflow as tf
 
-from coco_text import COCO_Text
+from coco_text import COCO_Text, coco_evaluation
 import coco_utils
 from dataset_reader import BatchDataset
 from text_fcn import text_fcn
@@ -112,7 +116,8 @@ if __name__ == '__main__':
 
     elif args.mode == 'coco':
         # After NN extract bboxes and evaluate with coco_text
-        fcn.test(test, args.coco_dir)
+        perm = np.random.ranint(0, len(val), size=[42])
+        fcn.test(val[perm], args.coco_dir)
         coco_pipe(coco_text, fnames)
 
 
@@ -122,7 +127,8 @@ def coco_pipe(coco_text):
     """
     :param coco_text: COCO_Text instance
     """
-    fnames = os.listdir(os.path.join(self.logs_dir, 'test/'))
+    fnames = os.listdir(os.path.join(args.logs_dir, 'test/'))
+    results = os.path.join(args.logs_dir, 'results.json')
     for fname in filenames:
         image = cv2.imread(fname)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -140,20 +146,18 @@ def coco_pipe(coco_text):
                 "score": scores[i]
             })
 
-        with open(os.path.join(self.logs_dir,
-                               'results.json'), 'w') as stream:
-            json.dumps(jsonarr, stream)
+    ct_res = ct.loadRes(jsonarr)
+    imgIds = [pred['image_id'] for pred in jsonarr]
+    detections = coco_evaluation.getDetections(
+        ct, ct_res, imgIds=imgIds, detection_threshold = 0.5)
+    coco_evaluation.printDetailedResults(ct, ct_res, None, 'FCN')
+
 
 def get_bboxes(image):
     """
     Return bounding boxes found and their accuracy score (TBD)
     :param image: B/W image (values in {0, 255})
     """
-    from scipy.ndimage.measurements import find_objects
-    from scipy.ndimage.measurements import label
-    from scipy.ndimage.measurements import labeled_comprehension as extract_feature
-    from scipy.ndimage.morphology import binary_closing as closing
-
     MIN_AREA = 32
     X = 3
     DIL = (3,3)
