@@ -27,6 +27,22 @@ def save_image(image, save_dir, name, mean=None):
     cv2.imwrite(os.path.join(save_dir, name + ".png"), image)
 
 
+def get_pad(image):
+    """
+    Return padding values needed to reach nearest multiple of 32
+    """
+    shape = np.array(image.shape[:2])
+    return (np.ceil(shape / 32.) * 32 - shape).astype(np.int32)
+
+
+def pad(image, dy, dx, val=0):
+    """ Pad image bottom and right with dy and dx """
+    return np.pad(image,
+                  ((0, dy), (0, dx), (0, 0)),
+                  'constant',
+                  constant_values=val)
+
+
 def get_variable(weights, name):
     init = tf.constant_initializer(weights, dtype=tf.float32)
     var = tf.get_variable(name=name, initializer=init,  shape=weights.shape)

@@ -8,6 +8,7 @@ import os
 import subprocess
 
 import cv2
+import numpy as np
 from scipy.ndimage.measurements import find_objects
 from scipy.ndimage.measurements import label
 from scipy.ndimage.measurements import labeled_comprehension as extract_feature
@@ -28,7 +29,7 @@ parser.add_argument('--max_steps', type=int, default=0, help='max steps to perfo
 parser.add_argument('--keep_prob', type=float, default=0.85, help='keep probability with dropout')
 parser.add_argument('--logs_dir', default='logs/temp/', help='path to logs directory')
 parser.add_argument('--coco_dir', default='COCO_Text/', help='path to dataset')
-parser.add_argument('--mode', required=True, choices=['train', 'test', 'visualize'])
+parser.add_argument('--mode', required=True, choices=['train', 'test', 'visualize', 'coco'])
 parser.add_argument('--save_freq', type=int, default=500, help='save model every save_freq')
 parser.add_argument('--train_freq', type=int, default=20, help='trace train_loss every train_freq')
 parser.add_argument('--val_freq', type=int, default=0, help='trace val_loss every val_freq')
@@ -38,6 +39,10 @@ args = parser.parse_args()
 
 if args.id_list == None and args.mode == 'visualize':
     parser.error('--mode="visualize" requires --id_list')
+
+assert args.image_size % 32 == 0,\
+       'image size must be a multiple of 32'
+
 
 
 def save_run():
@@ -59,6 +64,76 @@ def save_run():
         for k, v in args._get_kwargs():
             f.write('--%s=\'%s\' ' % (k, v))
         f.write('\n# git checkout master\n\n')
+
+
+def get_bboxes(image):
+    """
+    Return bounding boxes found and their accuracy score (TBD)
+    :param image: B/W image (values in {0, 255})
+    """
+    MIN_AREA = 32
+    X = 3
+    DIL = (3,3)
+    ONES = np.ones(DIL, dtype=np.uint8)
+
+    # pad image in order to prevent closing "constriction"
+    output = np.pad(image, (DIL, DIL), 'constant')
+    output = closing(output, structure=ONES, iterations=3).astype(np.uint8)
+    # remove padding
+    output = output[X:-X, X:-X]
+    labels, num = label(output, structure=ONES)
+    areas = extract_feature(output, labels, range(1, num+1), np.sum, np.int32, 0)
+
+    for i in xrange(num):
+        if areas[i] < MIN_AREA:
+            labels[labels == i+1] = 0
+
+    objs = find_objects(labels)
+
+    bboxes = np.array([
+        (obj[1].start, obj[1].stop, obj[0].start, obj[0].stop)
+        for obj in objs if obj is not None
+    ])
+    # count white pixels inside the current bbox
+    area = lambda i, b: np.count_nonzero(i[b[0]:b[1], b[2]:b[3]])
+    # score as foreground / bbox_area
+    scores = np.array([
+        area(image, bbox) / np.multiply(bbox[[3,1]] - bbox[[2,0]])
+        for bbox in bboxes
+    ])
+
+    return bboxes, scores
+
+
+def coco_pipe(coco_text):
+    """
+    :param coco_text: COCO_Text instance
+    """
+    fnames = os.listdir(os.path.join(args.logs_dir, 'output/'))
+    results = os.path.join(args.logs_dir, 'results.json')
+    for fname in fnames:
+        image = cv2.imread(fname)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # image[image > 0] = 255 (this should not be needed)
+        bboxes, scores = get_bboxes(image)
+        coco_id = int(fname[20:-11])
+
+        jsonarr = []
+
+        for i in xrange(np.size(bboxes)):
+            jsonarr.append({
+                'utf8_string': "null",
+                'image_id': coco_id,
+                'bbox': bboxex[i],
+                "score": scores[i]
+            })
+
+    ct_res = ct.loadRes(jsonarr)
+    imgIds = [pred['image_id'] for pred in jsonarr]
+    detections = coco_evaluation.getDetections(
+        ct, ct_res, imgIds=imgIds, detection_threshold = 0.5)
+    coco_evaluation.printDetailedResults(ct, ct_res, None, 'FCN')
+
 
 
 if __name__ == '__main__':
@@ -116,77 +191,8 @@ if __name__ == '__main__':
 
     elif args.mode == 'coco':
         # After NN extract bboxes and evaluate with coco_text
-        perm = np.random.ranint(0, len(val), size=[42])
-        fcn.test(val[perm], args.coco_dir)
-        coco_pipe(coco_text, fnames)
-
-
-
-
-def coco_pipe(coco_text):
-    """
-    :param coco_text: COCO_Text instance
-    """
-    fnames = os.listdir(os.path.join(args.logs_dir, 'test/'))
-    results = os.path.join(args.logs_dir, 'results.json')
-    for fname in filenames:
-        image = cv2.imread(fname)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        # image[image > 0] = 255 (this should not be needed)
-        bboxes, scores = get_bboxes(image)
-        coco_id = int(fname[20:-11])
-
-        jsonarr = []
-
-        for i in xrange(np.size(bboxes)):
-            jsonarr.append({
-                'utf8_string': "null",
-                'image_id': coco_id,
-                'bbox': bboxex[i],
-                "score": scores[i]
-            })
-
-    ct_res = ct.loadRes(jsonarr)
-    imgIds = [pred['image_id'] for pred in jsonarr]
-    detections = coco_evaluation.getDetections(
-        ct, ct_res, imgIds=imgIds, detection_threshold = 0.5)
-    coco_evaluation.printDetailedResults(ct, ct_res, None, 'FCN')
-
-
-def get_bboxes(image):
-    """
-    Return bounding boxes found and their accuracy score (TBD)
-    :param image: B/W image (values in {0, 255})
-    """
-    MIN_AREA = 32
-    X = 3
-    DIL = (3,3)
-    ONES = np.ones(DIL, dtype=np.uint8)
-
-    # pad image in order to prevent closing "constriction"
-    output = np.pad(image, (DIL, DIL), 'constant')
-    output = closing(output, structure=ONES, iterations=3).astype(np.uint8)
-    # remove padding
-    output = output[X:-X, X:-X]
-    labels, num = label(output, structure=ONES)
-    areas = extract_feature(output, labels, range(1, num+1), np.sum, np.int32, 0)
- 
-    for i in xrange(num):
-        if areas[i] < MIN_AREA:
-            labels[labels == i+1] = 0
- 
-    objs = find_objects(labels)
-     
-    bboxes = np.array([
-        (obj[1].start, obj[1].stop, obj[0].start, obj[0].stop)
-        for obj in objs if obj is not None
-    ])
-    # count white pixels inside the current bbox
-    area = lambda i, b: np.count_nonzero(i[b[0]:b[1], b[2]:b[3]])
-    # score as foreground / bbox_area
-    scores = np.array([
-        area(image, bbox) / np.multiply(bbox[[3,1]] - bbox[[2,0]])
-        for bbox in bboxes
-    ])
-     
-    return bboxes, scores
+        perm = np.random.randint(0, len(val), size=[42])
+        val = [coco_text.imgs[coco_id]['file_name'][:-4] for coco_id in val]
+        val = np.array(val, dtype=object)[perm].tolist()
+        fcn.test(val, args.coco_dir)
+        coco_pipe(coco_text)

@@ -71,7 +71,7 @@ class text_fcn(object):
             while not self.sv.should_stop():
                 images, anns, weights, _ = train_set.next_batch()
                 # Transform to match NN inputs
-                images = image.astype(np.float32) / 255.
+                images = images.astype(np.float32) / 255.
                 anns = anns.astype(np.int32) // 255
                 feed = {
                     self.image: images,
@@ -95,7 +95,7 @@ class text_fcn(object):
                     # Trace validition loss
                     images, anns, weights, _ = val_set.next_batch()
                     # Transform to match NN inputs
-                    images = image.astype(np.float32) / 255.
+                    images = images.astype(np.float32) / 255.
                     anns = anns.astype(np.int32) // 255
                     feed = {
                         self.image: images,
@@ -127,6 +127,10 @@ class text_fcn(object):
             for i, fname in enumerate(filenames):
                 in_path = os.path.join(directory, 'images/', fname)
                 in_image = cv2.imread(in_path + '.jpg')
+                # pad image to the nearest multiple of 32
+                dy, dx = tf_utils.get_pad(in_image)
+                in_image = tf_utils.pad(in_image, dy, dx)
+                # batch size = 1
                 in_image = np.expand_dims(in_image, axis=0)
                 in_image = in_image.astype(np.float32) / 255.
 
@@ -134,7 +138,10 @@ class text_fcn(object):
                 pred = sess.run(self.prediction, feed_dict=feed)
                 print('Evaluated image\t' + fname)
 
-                output = np.squeeze(pred, axis=3)[0]
+                # squeeze dims and undo padding
+                dy = output.shape[0] - dy
+                dx = output.shape[1] - dx
+                output = np.squeeze(pred, axis=(0,3))[:dy, :dx]
                 out_dir = os.path.join(self.logs_dir, 'output/')
                 if not os.path.exists(out_dir):
                     os.makedirs(out_dir)
@@ -156,8 +163,18 @@ class text_fcn(object):
                     # Just one iteration over all dataset's images
                     break
 
+                # pad single image to the nearest multiple of 32
+                dy, dx = tf_utils.get_pad(images[0])
+                images = tf_utils.pad(images[0], dy, dx)
+                anns = tf_utils.pad(anns[0], dy, dx)
+                weights = tf_utils.pad(weights[0], dy, dx, val=1)
+                # need to expand again batch size dimension
+                images = np.expand_dims(images, axis=0)
+                anns = np.expand_dims(anns, axis=0)
+                weights = np.expand_dims(weights, axis=0)
+
                 # Transform to match NN inputs
-                images = image.astype(np.float32) / 255.
+                images = images.astype(np.float32) / 255.
                 anns = anns.astype(np.int32) // 255
                 feed = {
                     self.image: images,
@@ -165,28 +182,32 @@ class text_fcn(object):
                     self.keep_prob: 1.0
                 }
                 preds = sess.run(self.prediction, feed_dict=feed)
-                preds = np.squeeze(preds, axis=3)
-                anns = np.squeeze(anns, axis=3)
+                # squeeze dims and undo padding
+                dy = preds.shape[1] - dy
+                dx = preds.shape[2] - dx
+                preds = np.squeeze(preds, axis=(0,3))[:dy, :dx]
+                anns = np.squeeze(anns, axis=(0,3))[:dy, :dx]
+                images = np.squeeze(images, axis=0)[:dy, :dx]
+                coco_ids = np.squeeze(coco_ids, axis=0)
 
                 out_dir = os.path.join(self.logs_dir, 'visualize/')
                 if not os.path.exists(out_dir):
                     os.makedirs(out_dir)
 
-                for i in range(vis_set.image_options['batch']):
-                    tf_utils.save_image(
-                        (images[i] * 255).astype(np.uint8),
-                        out_dir,
-                        name='input_%05d' % coco_ids[i])
-                    tf_utils.save_image(
-                        (anns[i] * 255).astype(np.uint8),
-                        out_dir,
-                        name='gt_%05d' % coco_ids[i])
-                    tf_utils.save_image(
-                        (preds[i] * 255).astype(np.uint8),
-                        out_dir,
-                        name='pred_%05d' % coco_ids[i])
+                tf_utils.save_image(
+                    (images * 255).astype(np.uint8),
+                    out_dir,
+                    name='input_%05d' % coco_ids)
+                tf_utils.save_image(
+                    (anns * 255).astype(np.uint8),
+                    out_dir,
+                    name='gt_%05d' % coco_ids)
+                tf_utils.save_image(
+                    (preds * 255).astype(np.uint8),
+                    out_dir,
+                    name='pred_%05d' % coco_ids)
 
-                    print('Saved image: %d' % coco_ids[i])
+                print('Saved image: %d' % coco_ids)
 
 
     def _training(self, lr, global_step):
