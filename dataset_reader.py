@@ -33,6 +33,7 @@ class BatchDataset:
         """
         print("Initializing Batch Dataset Reader...")
         self.coco_ids = np.array(coco_ids)
+        self.size = self.coco_ids.shape[0]
         self.coco_dir = coco_dir
         self.ct = ct
         if image_options is None:
@@ -43,6 +44,7 @@ class BatchDataset:
             self._read_images = self._batch_read
         print(self.image_options)
 
+        self.pre_saved = pre_saved
         if pre_saved:
             self._get_images = self._load_images
         else:
@@ -57,7 +59,7 @@ class BatchDataset:
     def next_batch(self):
         batch_size = self.image_options['batch']
 
-        if (self.batch_offset + batch_size) > self.coco_ids.shape[0]:
+        if (self.batch_offset + batch_size) > self.size:
             # Epoch finished, shuffle filenames
             self.epoch += 1
             np.random.shuffle(self.coco_ids)
@@ -86,13 +88,16 @@ class BatchDataset:
 
         for i, coco_id in enumerate(self.coco_ids[pos]):
             res = self._get_images(coco_id)
-            valid_anns = [
-                ann for ann in self.ct.imgToAnns[coco_id]
-                if self.ct.anns[ann]['legibility'] == 'legible'
-            ]
-            ann = np.random.choice(valid_anns)
-            window = coco_utils.get_window(res[1].shape, self.ct.anns[ann])
-            image, annotation, weight = coco_utils.crop_resize(res, window, size)
+            if self.pre_saved:
+                image, annotation, weight = res
+            else:
+                valid_anns = [
+                    ann for ann in self.ct.imgToAnns[coco_id]
+                    if self.ct.anns[ann]['legibility'] == 'legible'
+                ]
+                ann = np.random.choice(valid_anns)
+                window = coco_utils.get_window(res[1].shape, self.ct.anns[ann])
+                image, annotation, weight = coco_utils.crop_resize(res, window, size)
             images[i] = image
             annotations[i] = annotation[:,:,None]
             weights[i] = weight[:,:,None]
@@ -154,8 +159,9 @@ class BatchDataset:
             os.path.join(self.coco_dir, 'subset_validation/images/', fname))
         ann = cv2.imread(
             os.path.join(self.coco_dir, 'subset_validation/anns/', fname))
+        ann = cv2.cvtColor(ann, cv2.COLOR_BGR2GRAY)
         weight = cv2.imread(
-            os.path.join(self.coco_dir, 'subset_validation/weights', fname)
-        ).astype(np.float32) / 255.
+            os.path.join(self.coco_dir, 'subset_validation/weights', fname))
+        weight = cv2.cvtColor(weight, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.
 
         return [image, ann, weight]

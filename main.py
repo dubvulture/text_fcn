@@ -73,7 +73,7 @@ def get_bboxes(image):
     """
     MIN_AREA = 32
     X = 3
-    DIL = (3,3)
+    DIL = (X, X)
     ONES = np.ones(DIL, dtype=np.uint8)
 
     # pad image in order to prevent closing "constriction"
@@ -82,25 +82,29 @@ def get_bboxes(image):
     # remove padding
     output = output[X:-X, X:-X]
     labels, num = label(output, structure=ONES)
-    areas = extract_feature(output, labels, range(1, num+1), np.sum, np.int32, 0)
+    if num > 0:
+        areas = extract_feature(output, labels, range(1, num+1), np.sum, np.int32, 0)
 
-    for i in xrange(num):
-        if areas[i] < MIN_AREA:
-            labels[labels == i+1] = 0
+        for i in xrange(num):
+            if areas[i] < MIN_AREA:
+                labels[labels == i+1] = 0
 
-    objs = find_objects(labels)
+        objs = find_objects(labels)
 
-    bboxes = np.array([
-        (obj[1].start, obj[1].stop, obj[0].start, obj[0].stop)
-        for obj in objs if obj is not None
-    ])
-    # count white pixels inside the current bbox
-    area = lambda i, b: np.count_nonzero(i[b[0]:b[1], b[2]:b[3]])
-    # score as foreground / bbox_area
-    scores = np.array([
-        area(image, bbox) / np.multiply(bbox[[3,1]] - bbox[[2,0]])
-        for bbox in bboxes
-    ])
+        bboxes = np.array([
+            [obj[1].start, obj[1].stop, obj[0].start, obj[0].stop]
+            for obj in objs if obj is not None
+        ])
+        # count white pixels inside the current bbox
+        area = lambda b: np.count_nonzero(image[b[2]:b[3], b[0]:b[1]])
+        # score as foreground / bbox_area
+        scores = [
+            #area(bbox) / np.prod(bbox[[3,1]] - bbox[[2,0]])
+            1
+            for bbox in bboxes
+        ]
+    else:
+        bboxes, scores = None, None
 
     return bboxes, scores
 
@@ -109,30 +113,42 @@ def coco_pipe(coco_text):
     """
     :param coco_text: COCO_Text instance
     """
-    fnames = os.listdir(os.path.join(args.logs_dir, 'output/'))
+    directory = os.path.join(args.logs_dir, 'output/')
+    fnames = [
+        os.path.join(directory, image)
+        for image in os.listdir(directory)
+    ]
     results = os.path.join(args.logs_dir, 'results.json')
+    jsonarr = []
     for fname in fnames:
         image = cv2.imread(fname)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         # image[image > 0] = 255 (this should not be needed)
         bboxes, scores = get_bboxes(image)
-        coco_id = int(fname[20:-11])
+        coco_id = int(fname[-23:-11])
 
-        jsonarr = []
+        if bboxes is not None:
+            for i in xrange(bboxes.shape[0]):
+                # x1, x2, y1, y2 => x, dx, y, dy
+                bboxes[i, 1] -= bboxes[i, 0]
+                bboxes[i, 3] -= bboxes[i, 2]
+                # x, dx, y, dy => x, y, dx, dy
+                bboxes[i] = bboxes[i, [0,2,1,3]]
+                jsonarr.append({
+                    'utf8_string': "null",
+                    'image_id': coco_id,
+                    'bbox': bboxes[i].tolist(),
+                    "score": scores[i]
+                })
 
-        for i in xrange(np.size(bboxes)):
-            jsonarr.append({
-                'utf8_string': "null",
-                'image_id': coco_id,
-                'bbox': bboxex[i],
-                "score": scores[i]
-            })
+    with open(results, 'w') as stream:
+        json.dump(jsonarr, stream, indent=4)
 
-    ct_res = ct.loadRes(jsonarr)
+    ct_res = coco_text.loadRes(jsonarr)
     imgIds = [pred['image_id'] for pred in jsonarr]
     detections = coco_evaluation.getDetections(
-        ct, ct_res, imgIds=imgIds, detection_threshold = 0.5)
-    coco_evaluation.printDetailedResults(ct, ct_res, None, 'FCN')
+        coco_text, ct_res, imgIds=imgIds, detection_threshold = 0.5)
+    coco_evaluation.printDetailedResults(coco_text, detections, None, 'FCN')
 
 
 
@@ -143,12 +159,22 @@ if __name__ == '__main__':
     args.coco_dir = os.path.abspath(args.coco_dir) + '/'
     args.logs_dir = os.path.abspath(args.logs_dir) + '/'
     
+    train_set = None
+    val_set = None
+    
     if not os.path.exists(args.logs_dir):
         os.makedirs(args.logs_dir)
         ckpt = None
     else:
         # Get checkpoint from logs_dir if any
         ckpt = tf.train.get_checkpoint_state(args.logs_dir)
+        # And restore train/val sets if they have been serialized
+        train_pickle = os.path.join(args.logs_dir, 'train_set.pickle')
+        if os.path.exists(train_pickle):
+            train_set = pickle.load(open(train_pickle, 'r'))
+        val_pickle = os.path.join(args.logs_dir, 'train_set.pickle')
+        if os.path.exists(val_pickle):
+            train_set = pickle.load((train_pickle, 'r'))
 
     print("Setting up FCN...")
     fcn = text_fcn(
@@ -169,15 +195,21 @@ if __name__ == '__main__':
             'batch': args.batch_size,
             'size': args.image_size
         }
-        train_set = BatchDataset(train, args.coco_dir, coco_text, opt)
+        train_set = train_set or BatchDataset(train, args.coco_dir, coco_text, opt)
         # We want to keep track of validation loss on an almost constant dataset
         # => load previously saved images/gt/weights
-        val_set = None
         if args.val_freq > 0:
-            val_set = BatchDataset(val, args.coco_dir, coco_text, opt, pre_saved=True)
+            subset = os.listdir(os.path.join(
+                args.coco_dir, 'subset_validation/images/'))
+            subset_ids = [int(i[15:-4]) for i in subset]
+            val_set = val_set or BatchDataset(
+                subset_ids, args.coco_dir, coco_text, opt, pre_saved=True)
 
-        # We pass val_set to keep track of its loss
-        fcn.train(train_set, val_set=val_set, keep_prob=args.keep_prob, max_steps=args.max_steps)
+        # We pass val_set (if given) to keep track of its loss
+        fcn.train(train_set,
+                  val_set=val_set,
+                  keep_prob=args.keep_prob,
+                  max_steps=args.max_steps)
         
     elif args.mode == 'visualize':
         with open(args.id_list, 'rb') as f:
@@ -191,8 +223,8 @@ if __name__ == '__main__':
 
     elif args.mode == 'coco':
         # After NN extract bboxes and evaluate with coco_text
-        perm = np.random.randint(0, len(val), size=[42])
+        perm = np.random.randint(0, len(val), size=[10])
         val = [coco_text.imgs[coco_id]['file_name'][:-4] for coco_id in val]
         val = np.array(val, dtype=object)[perm].tolist()
-        fcn.test(val, args.coco_dir)
+        #fcn.test(val, args.coco_dir)
         coco_pipe(coco_text)

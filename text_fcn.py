@@ -46,13 +46,11 @@ class text_fcn(object):
         self.train_op = self._training(lr, global_step)
 
         tf.summary.scalar('train_loss', self.loss_op, collections=['train'])
-        tf.summary.scalar('val_loss', self.loss_op, collections=['val'])
-
         for var in tf.trainable_variables():
             tf.summary.histogram(var.op.name, var, collections=['train'])
 
-        self.summ_train = tf.summary.merge_all(key='train') 
-        self.summ_val = tf.summary.merge_all(key='val') 
+        self.summ_train = tf.summary.merge_all(key='train')
+        self.summ_val = tf.Summary()
 
         self.sv = self._setup_supervisor(checkpoint)
 
@@ -91,28 +89,38 @@ class text_fcn(object):
                     print('Step %d\tTrain_loss: %g' % (step, loss))
 
                 if ((val_set is not None) and (self.val_freq > 0) and
-                        ((step % self.val_freq) or (step == max_steps))):
-                    # Trace validition loss
-                    images, anns, weights, _ = val_set.next_batch()
-                    # Transform to match NN inputs
-                    images = images.astype(np.float32) / 255.
-                    anns = anns.astype(np.int32) // 255
-                    feed = {
-                        self.image: images,
-                        self.annotation: anns,
-                        self.weight: weights,
-                        self.keep_prob: 1.0
-                    }
-                    # no backpropagation
-                    loss, summary = sess.run(
-                        [self.loss_op, self.summ_val],
-                        feed_dict=feed)
-                    self.sv.summary_computed(sess, summary, step)
-                    print('Step %d\tValidation loss: %g' % (step, loss))
+                        (((step % self.val_freq) == 0) or (step == max_steps))):
+                    # Average loss on whole validation (sub)set
+                    iters = val_set.size // val_set.image_options['batch']
+                    mean_loss = 0
+                    print('Validation iterations == %d' % iters)
+                    for i in xrange(iters):
+                        print('Running validation... %d/%d' % (i, iters), end='\r')
+                        images, anns, weights, _ = val_set.next_batch()
+                        # Transform to match NN inputs
+                        images = images.astype(np.float32) / 255.
+                        anns = anns.astype(np.int32) // 255
+                        feed = {
+                            self.image: images,
+                            self.annotation: anns,
+                            self.weight: weights,
+                            self.keep_prob: 1.0
+                        }
+                        # no backpropagation
+                        loss= sess.run(self.loss_op, feed_dict=feed)
+                        mean_loss += loss
+
+                    self.summ_val.value.add(tag='val_loss', simple_value=mean_loss/iters)
+                    self.sv.summary_computed(sess, self.summ_val, step)
+                    print('Step %d\tValidation loss: %g' % (step, mean_loss / iters))
 
                 if (step == max_steps) or ((step % self.save_freq) == 0):
+                    # Save model
                     self.sv.saver.save(sess, self.logs_dir + 'model.ckpt', step)
                     print('Step %d\tModel saved.' % step)
+                    # Save train & set dataset state
+                    pickle.dump(train_set, os.path.join(args.logs_dir, 'train_set.pickle'))
+                    pickle.dump(val_set, os.path.join(args.logs_dir, 'val_set.pickle'))
 
                 if step == max_steps:
                     break
@@ -139,8 +147,8 @@ class text_fcn(object):
                 print('Evaluated image\t' + fname)
 
                 # squeeze dims and undo padding
-                dy = output.shape[0] - dy
-                dx = output.shape[1] - dx
+                dy = pred.shape[1] - dy
+                dx = pred.shape[2] - dx
                 output = np.squeeze(pred, axis=(0,3))[:dy, :dx]
                 out_dir = os.path.join(self.logs_dir, 'output/')
                 if not os.path.exists(out_dir):
