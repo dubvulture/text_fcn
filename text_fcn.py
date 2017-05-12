@@ -2,6 +2,7 @@ from __future__ import print_function
 from six.moves import xrange
 
 import os
+import pickle
 
 import cv2
 import tensorflow as tf
@@ -119,8 +120,12 @@ class text_fcn(object):
                     self.sv.saver.save(sess, self.logs_dir + 'model.ckpt', step)
                     print('Step %d\tModel saved.' % step)
                     # Save train & set dataset state
-                    pickle.dump(train_set, os.path.join(args.logs_dir, 'train_set.pickle'))
-                    pickle.dump(val_set, os.path.join(args.logs_dir, 'val_set.pickle'))
+                    pickle.dump(
+                        train_set,
+                        open(os.path.join(self.logs_dir, 'train_set.pickle'), 'w'))
+                    pickle.dump(
+                        val_set,
+                        open(os.path.join(self.logs_dir, 'val_set.pickle'), 'w'))
 
                 if step == max_steps:
                     break

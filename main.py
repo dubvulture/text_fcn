@@ -5,6 +5,7 @@ import argparse
 from datetime import datetime
 import json
 import os
+import pickle
 import subprocess
 
 import cv2
@@ -172,9 +173,9 @@ if __name__ == '__main__':
         train_pickle = os.path.join(args.logs_dir, 'train_set.pickle')
         if os.path.exists(train_pickle):
             train_set = pickle.load(open(train_pickle, 'r'))
-        val_pickle = os.path.join(args.logs_dir, 'train_set.pickle')
+        val_pickle = os.path.join(args.logs_dir, 'val_set.pickle')
         if os.path.exists(val_pickle):
-            train_set = pickle.load((train_pickle, 'r'))
+            val_set = pickle.load((train_pickle, 'r'))
 
     print("Setting up FCN...")
     fcn = text_fcn(
