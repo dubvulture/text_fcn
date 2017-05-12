@@ -5,10 +5,10 @@ import argparse
 from datetime import datetime
 import json
 import os
-import pickle
 import subprocess
 
 import cv2
+import dill
 import numpy as np
 from scipy.ndimage.measurements import find_objects
 from scipy.ndimage.measurements import label
@@ -170,12 +170,12 @@ if __name__ == '__main__':
         # Get checkpoint from logs_dir if any
         ckpt = tf.train.get_checkpoint_state(args.logs_dir)
         # And restore train/val sets if they have been serialized
-        train_pickle = os.path.join(args.logs_dir, 'train_set.pickle')
+        train_pickle = os.path.join(args.logs_dir, 'train_set.pkl')
         if os.path.exists(train_pickle):
-            train_set = pickle.load(open(train_pickle, 'r'))
-        val_pickle = os.path.join(args.logs_dir, 'val_set.pickle')
+            train_set = dill.load(open(train_pickle, 'rb'))
+        val_pickle = os.path.join(args.logs_dir, 'val_set.pkl')
         if os.path.exists(val_pickle):
-            val_set = pickle.load((train_pickle, 'r'))
+            val_set = dill.load(open(val_pickle, 'rb'))
 
     print("Setting up FCN...")
     fcn = text_fcn(

@@ -2,9 +2,10 @@ from __future__ import print_function
 from six.moves import xrange
 
 import os
-import pickle
+import sys
 
 import cv2
+import dill
 import tensorflow as tf
 import numpy as np
 
@@ -94,9 +95,9 @@ class text_fcn(object):
                     # Average loss on whole validation (sub)set
                     iters = val_set.size // val_set.image_options['batch']
                     mean_loss = 0
-                    print('Validation iterations == %d' % iters)
                     for i in xrange(iters):
-                        print('Running validation... %d/%d' % (i, iters), end='\r')
+                        print('Running validation... %d/%d' % (i+1, iters), end='\r')
+                        sys.stdout.flush()
                         images, anns, weights, _ = val_set.next_batch()
                         # Transform to match NN inputs
                         images = images.astype(np.float32) / 255.
@@ -113,7 +114,7 @@ class text_fcn(object):
 
                     self.summ_val.value.add(tag='val_loss', simple_value=mean_loss/iters)
                     self.sv.summary_computed(sess, self.summ_val, step)
-                    print('Step %d\tValidation loss: %g' % (step, mean_loss / iters))
+                    print('\nStep %d\tValidation loss: %d' % (step, mean_loss / iters))
 
                 if (step == max_steps) or ((self.save_freq > 0) and
                                            (step % self.save_freq) == 0):
@@ -121,12 +122,12 @@ class text_fcn(object):
                     self.sv.saver.save(sess, self.logs_dir + 'model.ckpt', step)
                     print('Step %d\tModel saved.' % step)
                     # Save train & set dataset state
-                    pickle.dump(
+                    dill.dump(
                         train_set,
-                        open(os.path.join(self.logs_dir, 'train_set.pickle'), 'w'))
-                    pickle.dump(
+                        open(os.path.join(self.logs_dir, 'train_set.pkl'), 'wb'))
+                    dill.dump(
                         val_set,
-                        open(os.path.join(self.logs_dir, 'val_set.pickle'), 'w'))
+                        open(os.path.join(self.logs_dir, 'val_set.pkl'), 'wb'))
 
                 if step == max_steps:
                     break
