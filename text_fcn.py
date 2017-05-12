@@ -115,7 +115,8 @@ class text_fcn(object):
                     self.sv.summary_computed(sess, self.summ_val, step)
                     print('Step %d\tValidation loss: %g' % (step, mean_loss / iters))
 
-                if (step == max_steps) or ((step % self.save_freq) == 0):
+                if (step == max_steps) or ((self.save_freq > 0) and
+                                           (step % self.save_freq) == 0):
                     # Save model
                     self.sv.saver.save(sess, self.logs_dir + 'model.ckpt', step)
                     print('Step %d\tModel saved.' % step)
