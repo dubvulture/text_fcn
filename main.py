@@ -148,7 +148,7 @@ def coco_pipe(coco_text):
     ct_res = coco_text.loadRes(jsonarr)
     imgIds = [pred['image_id'] for pred in jsonarr]
     detections = coco_evaluation.getDetections(
-        coco_text, ct_res, imgIds=imgIds, detection_threshold = 0.5)
+        coco_text, ct_res, imgIds=imgIds, detection_threshold=0.5)
     coco_evaluation.printDetailedResults(coco_text, detections, None, 'FCN')
 
 
@@ -224,8 +224,8 @@ if __name__ == '__main__':
 
     elif args.mode == 'coco':
         # After NN extract bboxes and evaluate with coco_text
-        perm = np.random.randint(0, len(val), size=[10])
+        perm = np.random.randint(0, len(val), size=[1024])
         val = [coco_text.imgs[coco_id]['file_name'][:-4] for coco_id in val]
         val = np.array(val, dtype=object)[perm].tolist()
-        #fcn.test(val, args.coco_dir)
+        fcn.test(val, args.coco_dir)
         coco_pipe(coco_text)

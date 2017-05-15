@@ -68,6 +68,7 @@ class text_fcn(object):
         :param max_steps: max steps to perform
         """
         with self.sv.managed_session() as sess:
+            print('Starting training...')
             while not self.sv.should_stop():
                 images, anns, weights, _ = train_set.next_batch()
                 # Transform to match NN inputs
@@ -114,7 +115,7 @@ class text_fcn(object):
 
                     self.summ_val.value.add(tag='val_loss', simple_value=mean_loss/iters)
                     self.sv.summary_computed(sess, self.summ_val, step)
-                    print('\nStep %d\tValidation loss: %d' % (step, mean_loss / iters))
+                    print('\nStep %d\tValidation loss: %g' % (step, mean_loss / iters))
 
                 if (step == max_steps) or ((self.save_freq > 0) and
                                            (step % self.save_freq) == 0):
@@ -250,7 +251,7 @@ class text_fcn(object):
         Setup the summary writer and variables
         :param checkpoint: saved model if any
         """
-        saver = tf.train.Saver(max_to_keep=10)
+        saver = tf.train.Saver(max_to_keep=20)
         sv = tf.train.Supervisor(
             logdir=self.logs_dir,
             save_summaries_secs=0,
