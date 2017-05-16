@@ -1,7 +1,9 @@
+from __future__ import absolute_import
+
 import tensorflow as tf
 
-import tf_utils
-from networks.vgg_net import create_vgg_net
+from text_fcn import tf_utils
+from text_fcn.networks import create_vgg_net
 
 
 

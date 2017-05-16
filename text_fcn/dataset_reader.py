@@ -1,13 +1,15 @@
 #coding=utf-8
-from __future__ import division, print_function
-from six.moves import xrange
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from six.moves import range
 
 import os
 
 import cv2
 import numpy as np
 
-import coco_utils
+from text_fcn import coco_utils
 
 
 

@@ -1,5 +1,6 @@
 __author__ = 'Charlie'
 # Utils used with tensorflow implemetation
+from __future__ import absolute_import
 from six.moves import urllib
 
 import os
