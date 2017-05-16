@@ -1,24 +1,21 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from six.moves import range
 
 import argparse
-import datetime.datetime as datetime
-import json
+from datetime import datetime
 import os
 import subprocess
 
-import cv2
 import dill
 import numpy as np
 import tensorflow as tf
 
 from text_fcn import coco_utils
+from text_fcn import TextFCN
 from text_fcn.coco_text import COCO_Text
-from text_fcn.dataset_reader import BatchDataset
+from text_fcn import BatchDataset
 from text_fcn.pipes import coco_pipe, icdar_pipe
-from text_fcn.text_fcn import TextFCN
 
 
 parser = argparse.ArgumentParser()
@@ -37,12 +34,11 @@ parser.add_argument('--id_list', help='text file containing images\' coco ids to
 
 args = parser.parse_args()
 
-if args.id_list == None and args.mode == 'visualize':
+if args.id_list is None and args.mode == 'visualize':
     parser.error('--mode="visualize" requires --id_list')
 
 assert args.image_size % 32 == 0,\
        'image size must be a multiple of 32'
-
 
 
 def save_run():
@@ -91,7 +87,7 @@ if __name__ == '__main__':
             val_set = dill.load(open(val_pickle, 'rb'))
 
     print("Setting up FCN...")
-    fcn = text_fcn(
+    fcn = TextFCN(
         logs_dir=args.logs_dir,
         lr=args.learning_rate,
         checkpoint=ckpt,
@@ -124,7 +120,7 @@ if __name__ == '__main__':
                   val_set=val_set,
                   keep_prob=args.keep_prob,
                   max_steps=args.max_steps)
-        
+
     elif args.mode == 'visualize':
         with open(args.id_list, 'rb') as f:
             ids = [int(line) for line in f if line.strip() != '']

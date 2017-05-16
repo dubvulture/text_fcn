@@ -1,17 +1,13 @@
-__author__ = 'Charlie'
-# Utils used with tensorflow implemetation
 from __future__ import absolute_import
-from six.moves import urllib
 
 import os
-import sys
 
 import cv2
 import numpy as np
 import tensorflow as tf
 
-from coco_utils import maybe_download_and_extract
 
+__author__ = 'Charlie'
 
 
 def save_image(image, save_dir, name, mean=None):
@@ -77,7 +73,7 @@ def conv2d_strided(x, W, b):
     return tf.nn.bias_add(conv, b)
 
 
-def conv2d_transpose_strided(x, W, b, output_shape=None, stride = 2):
+def conv2d_transpose_strided(x, W, b, output_shape=None, stride=2):
     # print x.get_shape()
     # print W.get_shape()
     if output_shape is None:

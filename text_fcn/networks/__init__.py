@@ -1,2 +1,3 @@
-from networks.fcn import create_fcn
-from networks.vgg_net import create_vgg_net
+from __future__ import absolute_import
+
+from text_fcn.networks.fcn import create_fcn

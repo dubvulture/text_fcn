@@ -10,10 +10,8 @@ import dill
 import tensorflow as tf
 import numpy as np
 
-from text_fcn import coco_utils
 from text_fcn import tf_utils
 from text_fcn.networks import create_fcn
-
 
 
 class TextFCN(object):
@@ -44,7 +42,7 @@ class TextFCN(object):
 
         self.prediction, self.logits = create_fcn(self.image, self.keep_prob, 2)
 
-        self.scores = tf.nn.softmax(self.logits)
+        self.score = tf.nn.softmax(self.logits)
 
         global_step = tf.Variable(0, name='global_step', trainable=False)
         self.loss_op = self._loss()
@@ -113,7 +111,7 @@ class TextFCN(object):
                             self.keep_prob: 1.0
                         }
                         # no backpropagation
-                        loss= sess.run(self.loss_op, feed_dict=feed)
+                        loss = sess.run(self.loss_op, feed_dict=feed)
                         mean_loss += loss
 
                     self.summ_val.value.add(tag='val_loss', simple_value=mean_loss/iters)
@@ -140,7 +138,8 @@ class TextFCN(object):
         """
         Run on images in directory without their groundtruth
         (hence this should be used only during validation/testing phase)
-        :param filenames: 
+        :param filenames:
+        :param directory:
         """
         with self.sv.managed_session() as sess:
             for i, fname in enumerate(filenames):
@@ -176,7 +175,7 @@ class TextFCN(object):
         """
         with self.sv.managed_session() as sess:
             while True:
-                images, anns, weights, coco_ids = vis_set.next_batch()
+                images, anns, _, coco_ids = vis_set.next_batch()
 
                 if vis_set.epoch != 1:
                     # Just one iteration over all dataset's images
@@ -186,11 +185,11 @@ class TextFCN(object):
                 dy, dx = tf_utils.get_pad(images[0])
                 images = tf_utils.pad(images[0], dy, dx)
                 anns = tf_utils.pad(anns[0], dy, dx)
-                weights = tf_utils.pad(weights[0], dy, dx, val=1)
+                #weights = tf_utils.pad(weights[0], dy, dx, val=1)
                 # need to expand again batch size dimension
                 images = np.expand_dims(images, axis=0)
                 anns = np.expand_dims(anns, axis=0)
-                weights = np.expand_dims(weights, axis=0)
+                #weights = np.expand_dims(weights, axis=0)
 
                 # Transform to match NN inputs
                 images = images.astype(np.float32) / 255.
@@ -227,9 +226,8 @@ class TextFCN(object):
                     name='pred_%05d' % coco_ids)
 
                 print('Saved image: %d' % coco_ids)
-                score = np.mean(np.abs(scores[:,:,:,0] - scores[:,:,:,1]), axis=(1,2))
+                score = np.mean(np.abs(score[:,:,:,0] - score[:,:,:,1]), axis=(1,2))
                 print('Score: %g' % score[0])
-
 
     def _training(self, lr, global_step):
         """

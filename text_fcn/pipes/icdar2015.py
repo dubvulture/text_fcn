@@ -9,7 +9,6 @@ from scipy.ndimage.measurements import labeled_comprehension as extract_feature
 from scipy.ndimage.morphology import binary_closing as closing
 
 
-
 def get_bboxes(image):
     """
     Return bounding boxes found and their accuracy score (TBD)
@@ -29,7 +28,7 @@ def get_bboxes(image):
     if num > 0:
         areas = extract_feature(output, labels, range(1, num+1), np.sum, np.int32, 0)
  
-        for i in xrange(num):
+        for i in range(num):
             if areas[i] < MIN_AREA:
                 output[output == i+1] = 0
  

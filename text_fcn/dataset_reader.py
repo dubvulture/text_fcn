@@ -1,8 +1,7 @@
-#coding=utf-8
+# coding=utf-8
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from six.moves import range
 
 import os
 
@@ -10,7 +9,6 @@ import cv2
 import numpy as np
 
 from text_fcn import coco_utils
-
 
 
 # Default options for no cropping (therefore batch size = 1)
@@ -73,7 +71,6 @@ class BatchDataset:
 
         return self._read_images(batch)
 
-
     def _batch_read(self, pos):
         """
         Read multiple images/annotations/weights and crop to same size.
@@ -86,7 +83,7 @@ class BatchDataset:
         images = np.zeros((n, size, size, 3), dtype=np.uint8)
         annotations = np.zeros((n, size, size, 1), dtype=np.uint8)
         weights = np.zeros((n, size, size, 1), dtype=np.float32)
-        coco_ids = np.zeros((n), dtype=object)
+        coco_ids = np.zeros(n, dtype=object)
 
         for i, coco_id in enumerate(self.coco_ids[pos]):
             res = self._get_images(coco_id)

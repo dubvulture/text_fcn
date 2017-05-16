@@ -1,16 +1,15 @@
 from six.moves import range
 
 import os
-import json
 
+import cv2
 import numpy as np
 from scipy.ndimage.measurements import find_objects
 from scipy.ndimage.measurements import label
 from scipy.ndimage.measurements import labeled_comprehension as extract_feature
 from scipy.ndimage.morphology import binary_closing as closing
 
-from coco_text import coco_evaluation
-
+from text_fcn.coco_text import coco_evaluation
 
 
 def get_bboxes(image):
@@ -59,13 +58,14 @@ def get_bboxes(image):
 def coco_pipe(coco_text, in_dir):
     """
     :param coco_text: COCO_Text instance
+    :param in_dir:
     """
     directory = os.path.join(in_dir, 'output/')
     fnames = [
         os.path.join(directory, image)
         for image in os.listdir(directory)
     ]
-    results = os.path.join(args.logs_dir, 'results.json')
+
     jsonarr = []
     for fname in fnames:
         image = cv2.imread(fname)
@@ -88,10 +88,8 @@ def coco_pipe(coco_text, in_dir):
                     "score": scores[i]
                 })
 
-    with open(results, 'w') as stream:
-        json.dump(jsonarr, stream, indent=4)
-
     ct_res = coco_text.loadRes(jsonarr)
     imgIds = [pred['image_id'] for pred in jsonarr]
     detections = coco_evaluation.getDetections(
         coco_text, ct_res, imgIds=imgIds, detection_threshold=0.5)
+    coco_evaluation.printDetailedResults(coco_text, detections, None, 'FCN')
