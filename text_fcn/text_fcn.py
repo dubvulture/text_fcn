@@ -1,5 +1,6 @@
+from __future__ import absolute_import
 from __future__ import print_function
-from six.moves import xrange
+from six.moves import range
 
 import os
 import sys
@@ -9,13 +10,11 @@ import dill
 import tensorflow as tf
 import numpy as np
 
-import coco_utils
-from networks.fcn import create_fcn
-import tf_utils
+from text_fcn import tf_utils
+from text_fcn.networks import create_fcn
 
 
-
-class text_fcn(object):
+class TextFCN(object):
 
     def __init__(self,
                  logs_dir,
@@ -42,6 +41,8 @@ class text_fcn(object):
             tf.float32, shape=[None, None, None, 1], name='weight')
 
         self.prediction, self.logits = create_fcn(self.image, self.keep_prob, 2)
+
+        self.score = tf.nn.softmax(self.logits)
 
         global_step = tf.Variable(0, name='global_step', trainable=False)
         self.loss_op = self._loss()
@@ -96,7 +97,7 @@ class text_fcn(object):
                     # Average loss on whole validation (sub)set
                     iters = val_set.size // val_set.image_options['batch']
                     mean_loss = 0
-                    for i in xrange(iters):
+                    for i in range(iters):
                         print('Running validation... %d/%d' % (i+1, iters), end='\r')
                         sys.stdout.flush()
                         images, anns, weights, _ = val_set.next_batch()
@@ -110,7 +111,7 @@ class text_fcn(object):
                             self.keep_prob: 1.0
                         }
                         # no backpropagation
-                        loss= sess.run(self.loss_op, feed_dict=feed)
+                        loss = sess.run(self.loss_op, feed_dict=feed)
                         mean_loss += loss
 
                     self.summ_val.value.add(tag='val_loss', simple_value=mean_loss/iters)
@@ -137,11 +138,12 @@ class text_fcn(object):
         """
         Run on images in directory without their groundtruth
         (hence this should be used only during validation/testing phase)
-        :param filenames: 
+        :param filenames:
+        :param directory:
         """
         with self.sv.managed_session() as sess:
             for i, fname in enumerate(filenames):
-                in_path = os.path.join(directory, 'images/', fname)
+                in_path = os.path.join(directory, fname)
                 in_image = cv2.imread(in_path + '.jpg')
                 # pad image to the nearest multiple of 32
                 dy, dx = tf_utils.get_pad(in_image)
@@ -173,7 +175,7 @@ class text_fcn(object):
         """
         with self.sv.managed_session() as sess:
             while True:
-                images, anns, weights, coco_ids = vis_set.next_batch()
+                images, anns, _, coco_ids = vis_set.next_batch()
 
                 if vis_set.epoch != 1:
                     # Just one iteration over all dataset's images
@@ -183,11 +185,11 @@ class text_fcn(object):
                 dy, dx = tf_utils.get_pad(images[0])
                 images = tf_utils.pad(images[0], dy, dx)
                 anns = tf_utils.pad(anns[0], dy, dx)
-                weights = tf_utils.pad(weights[0], dy, dx, val=1)
+                #weights = tf_utils.pad(weights[0], dy, dx, val=1)
                 # need to expand again batch size dimension
                 images = np.expand_dims(images, axis=0)
                 anns = np.expand_dims(anns, axis=0)
-                weights = np.expand_dims(weights, axis=0)
+                #weights = np.expand_dims(weights, axis=0)
 
                 # Transform to match NN inputs
                 images = images.astype(np.float32) / 255.
@@ -197,7 +199,7 @@ class text_fcn(object):
                     self.annotation: anns,
                     self.keep_prob: 1.0
                 }
-                preds = sess.run(self.prediction, feed_dict=feed)
+                preds, score = sess.run([self.prediction, self.score], feed_dict=feed)
                 # squeeze dims and undo padding
                 dy = preds.shape[1] - dy
                 dx = preds.shape[2] - dx
@@ -224,7 +226,8 @@ class text_fcn(object):
                     name='pred_%05d' % coco_ids)
 
                 print('Saved image: %d' % coco_ids)
-
+                score = np.mean(np.abs(score[:,:,:,0] - score[:,:,:,1]), axis=(1,2))
+                print('Score: %g' % score[0])
 
     def _training(self, lr, global_step):
         """

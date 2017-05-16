@@ -1,12 +1,13 @@
+from __future__ import absolute_import
+
 import os
 
 import numpy as np
 import scipy.io
 import tensorflow as tf
 
-import tf_utils
 from text_fcn import coco_utils
-
+from text_fcn import tf_utils
 
 
 MODEL_URL = 'http://www.vlfeat.org/matconvnet/models/beta16/' \
@@ -28,12 +29,13 @@ LAYERS = (
 )
 
 
-def create_vgg_net(placeholder, model_dir='networks/Model_zoo/'):
+def create_vgg_net(placeholder, model_dir='text_fcn/networks/Model_zoo/'):
     """
     :param placeholder: tf.placeholder where we will operate
     :param model_dir:   directory where to find the model .mat file
     """
     return _setup_net(placeholder, *_get_model_attr(model_dir))
+
 
 def _setup_net(placeholder, weights, mean_pixel):
     """
@@ -61,10 +63,11 @@ def _setup_net(placeholder, weights, mean_pixel):
         elif kind == 'pool':
             # VGG specifies max_pool... so why avg? Let's wait for response
             placeholder = tf_utils.max_pool_2x2(placeholder)
-            #placeholder = tf_utils.avg_pool_2x2(placeholder)
+            # placeholder = tf_utils.avg_pool_2x2(placeholder)
         net[name] = placeholder
 
     return net
+
 
 def _get_model_attr(model_dir):
     """
