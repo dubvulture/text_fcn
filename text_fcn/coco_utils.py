@@ -1,17 +1,16 @@
-#coding=utf-8
+# coding=utf-8
+from __future__ import absolute_import
 from __future__ import division
+from six.moves import range
 from six.moves import urllib
 
 import os
 import sys
-import math
-import random
 import tarfile
 import zipfile
 
 import cv2
 import numpy as np
-
 
 
 URL = 'https://s3.amazonaws.com/cocotext/COCO_Text.zip'
@@ -24,19 +23,20 @@ def read_dataset(ct):
     """
     train = [
         i for i in ct.train if any(
-                ann for ann in ct.imgToAnns[i]
-                if ct.anns[ann]['legibility'] == 'legible'
-            )
+            ann for ann in ct.imgToAnns[i]
+            if ct.anns[ann]['legibility'] == 'legible'
+        )
     ]
     val = [
         i for i in ct.val if any(
             ann for ann in ct.imgToAnns[i]
-                if ct.anns[ann]['legibility'] == 'legible'
+            if ct.anns[ann]['legibility'] == 'legible'
         )
     ]
     test = [ct.imgs[i]['file_name'][:-4] for i in ct.test]
 
     return train, val, test
+
 
 def maybe_download_and_extract(dir_path, url_name, is_tarfile=False, is_zipfile=False):
     if not os.path.exists(dir_path):
@@ -59,6 +59,7 @@ def maybe_download_and_extract(dir_path, url_name, is_tarfile=False, is_zipfile=
             with zipfile.ZipFile(filepath) as zf:
                 zip_dir = zf.namelist()[0]
                 zf.extractall(dir_path)
+
 
 def get_window(shape, annotation):
     """
@@ -107,6 +108,7 @@ def get_window(shape, annotation):
         )
     }
 
+
 def crop_resize(images, window, size):
     """
     :param images: list of (image, annotation, weight)
@@ -114,12 +116,12 @@ def crop_resize(images, window, size):
     :param size: resize size (square)
     :return: cropped images
     """
-    pad = [((0,0),), (), ()]
+    pad = [((0, 0),), (), ()]
     interp = [cv2.INTER_CUBIC, cv2.INTER_NEAREST, cv2.INTER_NEAREST]
     dsize = (size, size)
     value = [0.0, 0.0, 1.0]
 
-    for i in xrange(3):
+    for i in range(3):
         images[i] = images[i][window['slice']]
         images[i] = np.pad(images[i],
                            window['pad'] + pad[i],

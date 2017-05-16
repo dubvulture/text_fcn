@@ -4,3 +4,6 @@
 [submodule "coco_text"]
 	path = coco_text
 	url = https://github.com/dubvulture/coco_text
+[submodule "text_fcn/coco_text"]
+	path = text_fcn/coco_text
+	url = https://github.com/dubvulture/coco_text
