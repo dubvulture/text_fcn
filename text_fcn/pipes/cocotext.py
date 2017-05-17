@@ -1,6 +1,9 @@
+from __future__ import absolute_import
+from __future__ import division
 from six.moves import range
 
 import os
+import json
 
 import cv2
 import numpy as np
@@ -12,10 +15,11 @@ from scipy.ndimage.morphology import binary_closing as closing
 from text_fcn.coco_text import coco_evaluation
 
 
-def get_bboxes(image):
+def get_bboxes(image, probs):
     """
     Return bounding boxes found and their accuracy score (TBD)
     :param image: B/W image (values in {0, 255})
+    :param probs: gray image representing pixelwise confidence
     """
     MIN_AREA = 32
     X = 3
@@ -37,18 +41,14 @@ def get_bboxes(image):
 
         objs = find_objects(labels)
 
+        scores = [
+            np.sum((probs[obj][image[obj] > 0]) / 255) / np.count_nonzero(image[obj])
+            for obj in objs if obj is not None
+        ]
         bboxes = np.array([
             [obj[1].start, obj[1].stop, obj[0].start, obj[0].stop]
             for obj in objs if obj is not None
         ])
-        # count white pixels inside the current bbox
-        area = lambda b: np.count_nonzero(image[b[2]:b[3], b[0]:b[1]])
-        # score as foreground / bbox_area
-        scores = [
-            #area(bbox) / np.prod(bbox[[3,1]] - bbox[[2,0]])
-            1
-            for bbox in bboxes
-        ]
     else:
         bboxes, scores = None, None
 
@@ -65,13 +65,25 @@ def coco_pipe(coco_text, in_dir):
         os.path.join(directory, image)
         for image in os.listdir(directory)
     ]
+    images = [
+        image for image in fnames
+        if image.endswith('_output.png')
+    ]
+    probs = [
+        prob for prob in fnames
+        if prob.endswith('_scores.png')
+    ]
+    images.sort()
+    probs.sort()
 
     jsonarr = []
-    for fname in fnames:
+    for i, fname in enumerate(images):
         image = cv2.imread(fname)
+        prob = cv2.imread(probs[i])
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        prob = cv2.cvtColor(prob, cv2.COLOR_BGR2GRAY)
         # image[image > 0] = 255 (this should not be needed)
-        bboxes, scores = get_bboxes(image)
+        bboxes, scores = get_bboxes(image, prob)
         coco_id = int(fname[-23:-11])
 
         if bboxes is not None:
@@ -87,6 +99,13 @@ def coco_pipe(coco_text, in_dir):
                     'bbox': bboxes[i].tolist(),
                     "score": scores[i]
                 })
+
+    res_dir = os.path.join(directory, 'res/')
+    if not os.path.exists(res_dir):
+        os.makedirs(res_dir)
+
+    with open(os.path.join(res_dir, 'results.json'), 'w') as f:
+        json.dump(jsonarr, f, indent=4)
 
     ct_res = coco_text.loadRes(jsonarr)
     imgIds = [pred['image_id'] for pred in jsonarr]
