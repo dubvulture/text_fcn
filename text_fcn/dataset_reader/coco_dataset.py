@@ -28,14 +28,14 @@ class CocoDataset(BatchDataset):
         :param crop_size: window cropping size on each image (0 if none)
         :param pre_saved: whether to read images from storage or generate them on the go
         """
-        crop_fun = self._crop_resize if crop_size > 0 else None
+        crop_fun = self._crop_resize if crop_size > 0 and not pre_saved else None
         BatchDataset.__init__(self, coco_ids, batch_size, crop_size, image_op=crop_fun)
 
         self.ct = ct
         self.coco_dir = coco_dir
         self.pre_saved = pre_saved
 
-        if pre_saved:
+        if self.pre_saved:
             self._get_image = self._load_image
         else:
             self._get_image = self._gen_image
@@ -46,9 +46,9 @@ class CocoDataset(BatchDataset):
         :param coco_id: image's coco id
         :return: image, its groundtruth w/o illegibles and its weights
         """
-        coco_id = self.ct.imgs[coco_id]['file_name']
+        fname = self.ct.imgs[coco_id]['file_name']
         image = cv2.imread(
-            os.path.join(self.coco_dir, 'images/', coco_id)
+            os.path.join(self.coco_dir, 'images/', fname)
         )
         annotation = np.zeros(image.shape[:-1], dtype=np.uint8)
         weight = np.ones(image.shape[:-1], np.float32)
@@ -90,6 +90,4 @@ class CocoDataset(BatchDataset):
         ]
         ann = np.random.choice(valid_anns)
         window = coco_utils.get_window(annotation.shape, self.ct.anns[ann])
-        image, annotation, weight = coco_utils.crop_resize(
-            [image, annotation, weight], window, self.crop_size)
-        return image, annotation, weight, name
+        return coco_utils.crop_resize([image, annotation, weight], window, self.crop_size)

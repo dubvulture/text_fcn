@@ -22,7 +22,7 @@ class BatchDataset(object):
         self.batch_size = batch_size
         self.crop_size = crop_size
         # image_op passed to constructor or identity function
-        self.image_op = image_op or (lambda s, *args: args)
+        self.image_op = image_op or (lambda *args, **kwargs: args)
 
         if batch_size == 1:
             self._read_batch = self._simple_read
@@ -72,7 +72,7 @@ class BatchDataset(object):
         names = np.zeros(n, dtype=object)
 
         for i, name in enumerate(self.names[pos]):
-            image, annotation, weight, _ = self.image_op(*self._get_image(name), name=name)
+            image, annotation, weight = self.image_op(*self._get_image(name), name=name)
             images[i] = image
             annotations[i] = annotation[:, :, None]
             weights[i] = weight[:, :, None]

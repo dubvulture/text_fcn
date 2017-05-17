@@ -95,7 +95,7 @@ class TextFCN(object):
                 if ((val_set is not None) and (self.val_freq > 0) and
                         (((step % self.val_freq) == 0) or (step == max_steps))):
                     # Average loss on whole validation (sub)set
-                    iters = val_set.size // val_set.image_options['batch']
+                    iters = val_set.size // val_set.batch_size
                     mean_loss = 0
                     for i in range(iters):
                         print('Running validation... %d/%d' % (i+1, iters), end='\r')
