@@ -14,7 +14,7 @@ import tensorflow as tf
 from text_fcn import coco_utils
 from text_fcn import TextFCN
 from text_fcn.coco_text import COCO_Text
-from text_fcn import BatchDataset
+from text_fcn.dataset_reader import CocoDataset
 from text_fcn.pipes import coco_pipe, icdar_pipe
 
 
@@ -105,15 +105,15 @@ if __name__ == '__main__':
             'batch': args.batch_size,
             'size': args.image_size
         }
-        train_set = train_set or BatchDataset(train, args.coco_dir, coco_text, opt)
+        train_set = train_set or CocoDataset(train, coco_text, args.coco_dir, args.batch_size, args.image_size)
         # We want to keep track of validation loss on an almost constant dataset
         # => load previously saved images/gt/weights
         if args.val_freq > 0:
             subset = os.listdir(os.path.join(
                 args.coco_dir, 'subset_validation/images/'))
             subset_ids = [int(i[15:-4]) for i in subset]
-            val_set = val_set or BatchDataset(
-                subset_ids, args.coco_dir, coco_text, opt, pre_saved=True)
+            val_set = val_set or CocoDataset(
+                subset_ids, coco_text, args.coco_dir, args.batch_size, args.image_size, pre_saved=True)
 
         # We pass val_set (if given) to keep track of its loss
         fcn.train(train_set,
@@ -122,9 +122,11 @@ if __name__ == '__main__':
                   max_steps=args.max_steps)
 
     elif args.mode == 'visualize':
+        # Save to args.logs_dir/visualize input images + groundtruth + predictions + text heatmap
+        # of images written in args.id_list
         with open(args.id_list, 'rb') as f:
             ids = [int(line) for line in f if line.strip() != '']
-        ids_set = BatchDataset(ids, args.coco_dir, coco_text, None)
+        ids_set = CocoDataset(ids, coco_text, args.coco_dir, batch_size=1, crop_size=args.image_size)
         fcn.visualize(ids_set)
 
     elif args.mode == 'test':
