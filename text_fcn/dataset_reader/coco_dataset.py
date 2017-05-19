@@ -89,5 +89,7 @@ class CocoDataset(BatchDataset):
             if self.ct.anns[ann]['legibility'] == 'legible'
         ]
         ann = np.random.choice(valid_anns)
-        window = coco_utils.get_window(annotation.shape, self.ct.anns[ann])
+        # extract bbox => x, y, w, h
+        bbox_rect = np.int32(self.ct.anns[ann]['bbox'])
+        window = coco_utils.get_window(annotation.shape, bbox_rect)
         return coco_utils.crop_resize([image, annotation, weight], window, self.crop_size)
