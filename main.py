@@ -31,7 +31,7 @@ parser.add_argument('--save_freq', type=int, default=500, help='save model every
 parser.add_argument('--train_freq', type=int, default=20, help='trace train_loss every train_freq')
 parser.add_argument('--val_freq', type=int, default=0, help='trace val_loss every val_freq')
 parser.add_argument('--id_list', help='text file containing images\' coco ids to visualize')
-parser.add_argument('--dataset_dir', default='COCO_Text/', choices=['COCO_Text/', 'Synth_Text/'], help='path to dataset')
+parser.add_argument('--dataset', default='cocotext', choices=['cocotext', 'synthtext'], help='which dataset')
 
 args = parser.parse_args()
 
@@ -40,6 +40,9 @@ if args.id_list is None and args.mode == 'visualize':
 
 assert args.image_size % 32 == 0,\
        'image size must be a multiple of 32'
+
+if args.mode == 'coco':
+    assert args.dataset == 'cocotext'
 
 
 def save_run():
@@ -67,10 +70,15 @@ if __name__ == '__main__':
     if not os.path.exists(args.dataset_dir):
         raise Exception("dataset does not exist")
 
-    Dataset = CocoDataset if args.dataset_dir == 'COCO_Text/' else SynthDataset
+    if args.dataset == 'cocotext':
+        Dataset = CocoDataset
+        dataset_dir = 'COCO_Text/'
+    else: # args.dataset == 'synthtext'
+        Dataset = SynthText
+        dataset_dir = 'Synth_Text/'
 
     args.data_dir = os.path.abspath(args.dataset_dir) + '/'
-    args.logs_dir = os.path.abspath(args.dataset_dir) + '/'
+    args.logs_dir = os.path.abspath(args.logs_dir) + '/'
     
     train_set = None
     val_set = None
@@ -100,19 +108,19 @@ if __name__ == '__main__':
 
     # Train + Val both with COCO_Text and Synth_Text
     # Visualize & Test & Coco require COCO_Text
-    # Icdar is still ongoing
-    if ((args.mode in ['train', 'test'] and args.dataset_dir == 'COCO_Text/')
+    # Icdar is unbound
+    if ((args.mode in ['train', 'test'] and args.dataset == 'cocotext')
         or (args.mode in ['visualize', 'coco'])):
         # Train or Test on COCO_Text + Visualize
-        coco_utils.maybe_download_and_extract(args.dataset_dir, coco_utils.URL, is_zipfile=True)
-        chosen_text = COCO_Text(os.path.join(args.dataset_dir, 'COCO_Text.json'))
+        coco_utils.maybe_download_and_extract(dataset_dir, coco_utils.URL, is_zipfile=True)
+        chosen_text = COCO_Text(os.path.join(dataset_dir, 'COCO_Text.json'))
         read_dataset = coco_utils.coco_read_dataset
-    elif args.mode == 'train' and args.dataset_dir == 'Synth_Text/':
+    elif args.mode == 'train' and args.dataset == 'synthtext':
         # args.dataset_dir == 'Synth_Text/'
-        chosen_text = np.load(os.path.join(args.dataset_dir, 'synth.npy'))[()]
+        chosen_text = np.load(os.path.join(dataset_dir, 'synth.npy'))[()]
         read_dataset = coco_utils.synth_read_dataset
     else:
-        print('What kind of combination is this?')
+        assert args.mode == 'icdar'
 
     train, val, test = read_dataset(chosen_text)
 
