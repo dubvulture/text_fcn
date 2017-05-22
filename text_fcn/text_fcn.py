@@ -153,13 +153,14 @@ class TextFCN(object):
                 in_image = in_image.astype(np.float32) / 255.
 
                 feed = {self.image: in_image, self.keep_prob: 1.0}
-                pred = sess.run(self.prediction, feed_dict=feed)
+                pred, score = sess.run([self.prediction, self.score], feed_dict=feed)
                 print('Evaluated image\t' + fname)
 
                 # squeeze dims and undo padding
                 dy = pred.shape[1] - dy
                 dx = pred.shape[2] - dx
                 output = np.squeeze(pred, axis=(0,3))[:dy, :dx]
+                score = np.squeeze(score, axis=0)[:dy, :dx, 1]
                 out_dir = os.path.join(self.logs_dir, 'output/')
                 if not os.path.exists(out_dir):
                     os.makedirs(out_dir)
@@ -168,6 +169,10 @@ class TextFCN(object):
                     (output * 255).astype(np.uint8),
                     out_dir,
                     name=fname + '_output')
+                tf_utils.save_image(
+                    (score * 255).astype(np.uint8),
+                    out_dir,
+                    name=fname + '_scores')
 
     def visualize(self, vis_set):
         """
@@ -224,6 +229,10 @@ class TextFCN(object):
                     (preds * 255).astype(np.uint8),
                     out_dir,
                     name='pred_%05d' % coco_ids)
+                tf_utils.save_image(
+                    (score[0,:,:,1] * 255).astype(np.uint8),
+                    out_dir,
+                    name='prob_%05d' % coco_ids)
 
                 print('Saved image: %d' % coco_ids)
                 score = np.mean(np.abs(score[:,:,:,0] - score[:,:,:,1]), axis=(1,2))
