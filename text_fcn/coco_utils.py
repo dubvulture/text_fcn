@@ -16,7 +16,7 @@ import numpy as np
 URL = 'https://s3.amazonaws.com/cocotext/COCO_Text.zip'
 
 
-def read_dataset(ct):
+def coco_read_dataset(ct):
     """
     Returns train and validation dataset filenames list (no extension)
     :param ct: COCO_Text instance
@@ -36,6 +36,22 @@ def read_dataset(ct):
     test = [ct.imgs[i]['file_name'][:-4] for i in ct.test]
 
     return train, val, test
+
+
+def synth_read_dataset(st):
+    """
+    Returns train and validation dataset filenames list (no extension)
+    :param st: Synth_Text .npy
+    """
+    train = [
+        key for key in st
+        if st[key]['set'] == 'train'
+    ]
+    val = [
+        key for key in st
+        if st[key]['set'] == 'val'
+    ]
+    return train, val, None
 
 
 def maybe_download_and_extract(dir_path, url_name, is_tarfile=False, is_zipfile=False):
@@ -61,21 +77,26 @@ def maybe_download_and_extract(dir_path, url_name, is_tarfile=False, is_zipfile=
                 zf.extractall(dir_path)
 
 
-def get_window(shape, annotation):
+def get_window(shape, bbox):
     """
     :param shape: image shape (used as boundaries)
-    :param annotation:  ct.anns object
+    :param bbox: initial bbox from which to expand (x, y, w, h)
     :return: window dict with slices and padding values
     """
-    x, y, dx, dy = np.array(annotation['bbox'], np.int32)
-    x1, y1, x2, y2 = x, y, x+dx, y+dy
+    x1, y1, x2, y2 = bbox[0], bbox[1], bbox[0]+bbox[2], bbox[1]+bbox[3]
     h, w = shape
 
+    # Bounds checking is needed thanks to SynthText :)
+    x1 = max(0, x1)
+    x2 = min(w, x2)
+    y1 = max(0, y1)
+    y2 = min(h, y2)
+
     # expand left, right, up, down
-    x1 -= np.random.randint(0, x1+1)
-    x2 += np.random.randint(0, w-x2+1)
-    y1 -= np.random.randint(0, y1+1)
-    y2 += np.random.randint(0, h-y2+1)
+    x1 -= np.random.randint(0, x1 + 1)
+    x2 += np.random.randint(0, w - x2 + 1)
+    y1 -= np.random.randint(0, y1 + 1)
+    y2 += np.random.randint(0, h - y2 + 1)
 
     ratio = (x2 - x1) / (y2 - y1)
 
