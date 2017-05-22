@@ -88,7 +88,7 @@ class TextFCN(object):
                 if (step == max_steps) or ((step % self.train_freq) == 0):
                     loss, summary = sess.run(
                         [self.loss_op, self.summ_train],
-                        feed_dict=feed)   
+                        feed_dict=feed)
                     self.sv.summary_computed(sess, summary, step)
                     print('Step %d\tTrain_loss: %g' % (step, loss))
 

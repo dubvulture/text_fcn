@@ -67,19 +67,19 @@ def save_run():
 
 
 if __name__ == '__main__':
-    if not os.path.exists(args.dataset_dir):
-        raise Exception("dataset does not exist")
-
     if args.dataset == 'cocotext':
         Dataset = CocoDataset
         dataset_dir = 'COCO_Text/'
     else: # args.dataset == 'synthtext'
-        Dataset = SynthText
+        Dataset = SynthDataset
         dataset_dir = 'Synth_Text/'
 
-    args.data_dir = os.path.abspath(args.dataset_dir) + '/'
+    dataset_dir = os.path.abspath(dataset_dir) + '/'
     args.logs_dir = os.path.abspath(args.logs_dir) + '/'
-    
+
+    if not os.path.exists(dataset_dir):
+        raise Exception("dataset does not exist")
+
     train_set = None
     val_set = None
     
@@ -111,7 +111,6 @@ if __name__ == '__main__':
     # Icdar is unbound
     if ((args.mode in ['train', 'test'] and args.dataset == 'cocotext')
         or (args.mode in ['visualize', 'coco'])):
-        # Train or Test on COCO_Text + Visualize
         coco_utils.maybe_download_and_extract(dataset_dir, coco_utils.URL, is_zipfile=True)
         chosen_text = COCO_Text(os.path.join(dataset_dir, 'COCO_Text.json'))
         read_dataset = coco_utils.coco_read_dataset
@@ -124,26 +123,28 @@ if __name__ == '__main__':
 
     train, val, test = read_dataset(chosen_text)
 
-    if args.dataset_dir == 'Synth_Text/':
-        temp = chosen_text['train'].copy()
-        temp.update(chosen_text['val'])
-        chosen_text = temp
-
     if args.mode == 'train':
         save_run()
         opt = {
             'batch': args.batch_size,
             'size': args.image_size
         }
-        train_set = train_set or Dataset(train, chosen_text, args.dataset_dir, args.batch_size, args.image_size)
+        train_set = train_set or Dataset(train, chosen_text, dataset_dir, args.batch_size, args.image_size)
         # We want to keep track of validation loss on an almost constant dataset
         # => load previously saved images/gt/weights
         if args.val_freq > 0:
-            subset = os.listdir(os.path.join(
-                args.coco_dir, 'subset_validation/images/'))
-            subset_ids = [int(i[15:-4]) for i in subset]
+            if args.dataset == 'cocotext':
+                subset = os.listdir(os.path.join(
+                    args.dataset_dir, 'subset_validation/images/'))
+                subset = [int(i[15:-4]) for i in subset]
+            else: # args.dataset == 'synthtext'
+                subset = [
+                    '/'.join(os.path.join(root, fname).split('/')[-2:])[:-4]
+                    for root, _, files in os.walk(os.path.join(dataset_dir, 'subset_validation/images'))
+                    for fname in files
+                ]
             val_set = val_set or Dataset(
-                subset_ids, chosen_text, args.dataset_dir, args.batch_size, args.image_size, pre_saved=True)
+                subset, chosen_text, dataset_dir, args.batch_size, args.image_size, pre_saved=True)
 
         # We pass val_set (if given) to keep track of its loss
         fcn.train(train_set,
@@ -156,7 +157,7 @@ if __name__ == '__main__':
         # of images written in args.id_list
         with open(args.id_list, 'rb') as f:
             ids = [int(line) for line in f if line.strip() != '']
-        ids_set = CocoDataset(ids, chosen_text, args.dataset_dir, batch_size=1, crop_size=args.image_size)
+        ids_set = CocoDataset(ids, chosen_text, dataset_dir, batch_size=1, crop_size=args.image_size)
         fcn.visualize(ids_set)
 
     elif args.mode == 'test':

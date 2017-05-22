@@ -45,8 +45,8 @@ class SynthDataset(BatchDataset):
             annotation = np.zeros(image.shape[:-1], dtype=np.uint8)
             weight = np.ones(image.shape[:-1], dtype=np.float32)
 
-            for charBB in self.st[fname]:
-                cv2.fillConvexPoly(annotation, charBB.astype(np.int32), 255)
+            for charBB in self.st[fname]['anns']:
+                cv2.fillConvexPoly(annotation, charBB.astype(np.int32), 1)
 
             return [image, annotation, weight]
 
@@ -63,8 +63,8 @@ class SynthDataset(BatchDataset):
 
         def _crop_resize(self, image, annotation, weight, name=None):
             assert name is not None
-            choice = np.random.randint(0, val[fname].shape[0])
-            bbox = np.floor(val[fname][choice])
+            choice = np.random.randint(0, self.st[name]['anns'].shape[0])
+            bbox = np.floor(self.st[name]['anns'][choice])
             # [xi, yi : i=0..4] => x, y, w, h
             bbox = cv2.boundingRect(np.expand_dims(bbox, axis=1))
             bbox = np.int32(bbox)

@@ -43,7 +43,15 @@ def synth_read_dataset(st):
     Returns train and validation dataset filenames list (no extension)
     :param st: Synth_Text .npy
     """
-    return st['train'].keys(), st['val'].keys(), None
+    train = [
+        key for key in st
+        if st[key]['set'] == 'train'
+    ]
+    val = [
+        key for key in st
+        if st[key]['set'] == 'val'
+    ]
+    return train, val, None
 
 
 def maybe_download_and_extract(dir_path, url_name, is_tarfile=False, is_zipfile=False):
@@ -81,7 +89,7 @@ def get_window(shape, bbox):
     # Bounds checking is needed thanks to SynthText :)
     x1 = max(0, x1)
     x2 = min(w, x2)
-    y1 = max(0, y2)
+    y1 = max(0, y1)
     y2 = min(h, y2)
 
     # expand left, right, up, down
