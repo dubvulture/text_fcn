@@ -28,6 +28,7 @@ class CocoDataset(BatchDataset):
         :param crop_size: window cropping size on each image (0 if none)
         :param pre_saved: whether to read images from storage or generate them on the go
         """
+        # crop only when crop_size if given AND images are not loaded from disk
         crop_fun = self._crop_resize if crop_size > 0 and not pre_saved else None
         BatchDataset.__init__(self, coco_ids, batch_size, crop_size, image_op=crop_fun)
 

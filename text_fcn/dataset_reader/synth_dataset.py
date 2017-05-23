@@ -28,6 +28,7 @@ class SynthDataset(BatchDataset):
             :param crop_size: 
             :param pre_saved: 
             """
+            # crop only when crop_size if given AND images are not loaded from disk
             crop_fun = self._crop_resize if crop_size > 0 and not pre_saved else None
             BatchDataset.__init__(self, fnames, batch_size, crop_size, image_op=crop_fun)
 

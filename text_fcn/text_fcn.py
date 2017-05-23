@@ -116,6 +116,7 @@ class TextFCN(object):
 
                     self.summ_val.value.add(tag='val_loss', simple_value=mean_loss/iters)
                     self.sv.summary_computed(sess, self.summ_val, step)
+                    self.summ_val.value.pop()
                     print('\nStep %d\tValidation loss: %g' % (step, mean_loss / iters))
 
                 if (step == max_steps) or ((self.save_freq > 0) and

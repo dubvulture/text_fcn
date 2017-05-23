@@ -131,7 +131,7 @@ if __name__ == '__main__':
         if args.val_freq > 0:
             if args.dataset == 'cocotext':
                 subset = os.listdir(os.path.join(
-                    args.dataset_dir, 'subset_validation/images/'))
+                    dataset_dir, 'subset_validation/images/'))
                 subset = [int(i[15:-4]) for i in subset]
             else: # args.dataset == 'synthtext'
                 subset = [
@@ -153,7 +153,7 @@ if __name__ == '__main__':
         # of images written in args.id_list
         with open(args.id_list, 'rb') as f:
             ids = [int(line) for line in f if line.strip() != '']
-        ids_set = CocoDataset(ids, chosen_text, dataset_dir, batch_size=1, crop_size=args.image_size)
+        ids_set = CocoDataset(ids, chosen_text, dataset_dir, batch_size=1)
         fcn.visualize(ids_set)
 
     elif args.mode == 'test':
