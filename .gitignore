@@ -2,8 +2,8 @@
 Synth_Text/
 COCO_Text/
 logs/
-Model_zoo/
 runs.sh
+Model_zoo/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

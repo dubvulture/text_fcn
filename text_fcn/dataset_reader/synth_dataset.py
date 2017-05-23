@@ -28,6 +28,7 @@ class SynthDataset(BatchDataset):
             :param crop_size: 
             :param pre_saved: 
             """
+            # crop only when crop_size if given AND images are not loaded from disk
             crop_fun = self._crop_resize if crop_size > 0 and not pre_saved else None
             BatchDataset.__init__(self, fnames, batch_size, crop_size, image_op=crop_fun)
 
@@ -46,7 +47,7 @@ class SynthDataset(BatchDataset):
             weight = np.ones(image.shape[:-1], dtype=np.float32)
 
             for charBB in self.st[fname]['anns']:
-                cv2.fillConvexPoly(annotation, charBB.astype(np.int32), 1)
+                cv2.fillConvexPoly(annotation, charBB.astype(np.int32), 255)
 
             return [image, annotation, weight]
 

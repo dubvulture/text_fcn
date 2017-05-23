@@ -100,21 +100,25 @@ def get_window(shape, bbox):
 
     ratio = (x2 - x1) / (y2 - y1)
 
-    if ratio > 1:
-        # expand ys (window's width)
-        diff = (x2 - x1) - (y2 - y1)
-        split = np.random.randint(0, diff)
-        y1 -= split
-        y2 += diff-split
-    elif ratio < 1:
-        # expand xs (window's height)
-        diff = (y2 - y1) - (x2 - x1)
-        split = np.random.randint(0, diff)
-        x1 -= split
-        x2 += diff-split
-    else:
-        # already a square
-        pass
+    try:
+        if ratio > 1:
+            # expand ys (window's width)
+            diff = (x2 - x1) - (y2 - y1)
+            split = np.random.randint(0, diff)
+            y1 -= split
+            y2 += diff-split
+        elif ratio < 1:
+            # expand xs (window's height)
+            diff = (y2 - y1) - (x2 - x1)
+            split = np.random.randint(0, diff)
+            x1 -= split
+            x2 += diff-split
+        else:
+            # already a square
+            pass
+    except:
+        print(ratio)
+        print(x1, x2, y1, y2)
 
     assert((x2 - x1) == (y2 - y1))
 

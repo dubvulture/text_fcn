@@ -20,7 +20,7 @@ from text_fcn.pipes import coco_pipe, icdar_pipe
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--learning_rate', type=float, default='1e-04', help='learning rate for Adam Optimizer')
+parser.add_argument('--learning_rate', type=float, default='1e-04', help='learning rate for the optimizer')
 parser.add_argument('--image_size', type=int, default=256, help='image size for training')
 parser.add_argument('--batch_size', type=int, default=2, help='batch size for training')
 parser.add_argument('--max_steps', type=int, default=0, help='max steps to perform, 0 for infinity')
@@ -125,17 +125,13 @@ if __name__ == '__main__':
 
     if args.mode == 'train':
         save_run()
-        opt = {
-            'batch': args.batch_size,
-            'size': args.image_size
-        }
         train_set = train_set or Dataset(train, chosen_text, dataset_dir, args.batch_size, args.image_size)
         # We want to keep track of validation loss on an almost constant dataset
         # => load previously saved images/gt/weights
         if args.val_freq > 0:
             if args.dataset == 'cocotext':
                 subset = os.listdir(os.path.join(
-                    args.dataset_dir, 'subset_validation/images/'))
+                    dataset_dir, 'subset_validation/images/'))
                 subset = [int(i[15:-4]) for i in subset]
             else: # args.dataset == 'synthtext'
                 subset = [
@@ -157,7 +153,7 @@ if __name__ == '__main__':
         # of images written in args.id_list
         with open(args.id_list, 'rb') as f:
             ids = [int(line) for line in f if line.strip() != '']
-        ids_set = CocoDataset(ids, chosen_text, dataset_dir, batch_size=1, crop_size=args.image_size)
+        ids_set = CocoDataset(ids, chosen_text, dataset_dir, batch_size=1)
         fcn.visualize(ids_set)
 
     elif args.mode == 'test':
@@ -176,5 +172,5 @@ if __name__ == '__main__':
         # After NN extract bboxes (orientated) and save for online evaluation
         val_dir = '/home/manuel/Downloads/ICDAR2015/test/'
         val = [i[:-4] for i in os.listdir(val_dir)]
-        #fcn.test(val, val_dir)
+        fcn.test(val, val_dir)
         icdar_pipe(args.logs_dir)
