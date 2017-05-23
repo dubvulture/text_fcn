@@ -46,7 +46,7 @@ class SynthDataset(BatchDataset):
             weight = np.ones(image.shape[:-1], dtype=np.float32)
 
             for charBB in self.st[fname]['anns']:
-                cv2.fillConvexPoly(annotation, charBB.astype(np.int32), 1)
+                cv2.fillConvexPoly(annotation, charBB.astype(np.int32), 255)
 
             return [image, annotation, weight]
 

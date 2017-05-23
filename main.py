@@ -125,10 +125,6 @@ if __name__ == '__main__':
 
     if args.mode == 'train':
         save_run()
-        opt = {
-            'batch': args.batch_size,
-            'size': args.image_size
-        }
         train_set = train_set or Dataset(train, chosen_text, dataset_dir, args.batch_size, args.image_size)
         # We want to keep track of validation loss on an almost constant dataset
         # => load previously saved images/gt/weights
@@ -176,5 +172,5 @@ if __name__ == '__main__':
         # After NN extract bboxes (orientated) and save for online evaluation
         val_dir = '/home/manuel/Downloads/ICDAR2015/test/'
         val = [i[:-4] for i in os.listdir(val_dir)]
-        #fcn.test(val, val_dir)
+        fcn.test(val, val_dir)
         icdar_pipe(args.logs_dir)
