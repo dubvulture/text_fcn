@@ -20,7 +20,7 @@ from text_fcn.pipes import coco_pipe, icdar_pipe
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--learning_rate', type=float, default='1e-04', help='learning rate for Adam Optimizer')
+parser.add_argument('--learning_rate', type=float, default='1e-04', help='learning rate for the optimizer')
 parser.add_argument('--image_size', type=int, default=256, help='image size for training')
 parser.add_argument('--batch_size', type=int, default=2, help='batch size for training')
 parser.add_argument('--max_steps', type=int, default=0, help='max steps to perform, 0 for infinity')
