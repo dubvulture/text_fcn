@@ -15,7 +15,8 @@ class BatchDataset(object):
         :param image_op:
         """
         print('Initializing Batch Dataset Reader...')
-        self.names = np.random.shuffle(np.array(names))
+        self.names = np.array(names)
+        np.random.shuffle(self.names)
         self.size = self.names.shape[0]
         self.batch_offset = 0
         self.epoch = 1
