@@ -110,7 +110,7 @@ if __name__ == '__main__':
     # Visualize & Test & Coco require COCO_Text
     # Icdar is unbound
     if ((args.mode in ['train', 'test'] and args.dataset == 'cocotext')
-        or (args.mode in ['visualize', 'coco'])):
+        or (args.mode in ['visualize', 'coco', 'icdar'])):
         coco_utils.maybe_download_and_extract(dataset_dir, coco_utils.URL, is_zipfile=True)
         chosen_text = COCO_Text(os.path.join(dataset_dir, 'COCO_Text.json'))
         read_dataset = coco_utils.coco_read_dataset
@@ -119,7 +119,7 @@ if __name__ == '__main__':
         chosen_text = np.load(os.path.join(dataset_dir, 'synth.npy'))[()]
         read_dataset = coco_utils.synth_read_dataset
     else:
-        assert args.mode == 'icdar'
+        print('???')
 
     train, val, test = read_dataset(chosen_text)
 
