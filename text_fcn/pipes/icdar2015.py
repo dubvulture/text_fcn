@@ -7,6 +7,7 @@ import numpy as np
 from scipy.ndimage.measurements import label
 from scipy.ndimage.measurements import labeled_comprehension as extract_feature
 from scipy.ndimage.morphology import binary_closing as closing
+from scipy.ndimage.morphology import binary_opening as opening
 
 
 def get_bboxes(image):
@@ -14,14 +15,15 @@ def get_bboxes(image):
     Return bounding boxes found and their accuracy score (TBD)
     :param image: B/W image (values in {0, 255})
     """
-    MIN_AREA = 32
+    MIN_AREA = 64
     X = 3
     DIL = (X, X)
     ONES = np.ones(DIL, dtype=np.uint8)
  
     # pad image in order to prevent closing "constriction"
     output = np.pad(image, (DIL, DIL), 'constant')
-    output = closing(output, structure=ONES, iterations=3).astype(np.uint8)
+    output = opening(output, structure=ONES, iterations=3).astype(np.uint8)
+    #output = closing(output, structure=ONES, iterations=1).astype(np.uint8)
     # remove padding
     output = output[X:-X, X:-X]
     labels, num = label(output, structure=ONES)
@@ -69,6 +71,7 @@ def icdar_pipe(in_dir):
         bboxes, scores = get_bboxes(image)
  
         if bboxes is not None:
-            with open('res_%s.txt' % fname[:-11], 'w') as f:
+            out = os.path.join(directory, 'res_%s.txt' % fname[:-11])
+            with open(out, 'w') as f:
                 for i in range(bboxes.shape[0]):
                     f.write(('{},'*7 + '{}\r\n').format(*bboxes[i]))
