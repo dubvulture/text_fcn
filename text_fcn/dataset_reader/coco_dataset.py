@@ -52,7 +52,7 @@ class CocoDataset(BatchDataset):
             os.path.join(self.coco_dir, 'images/', fname)
         )
         annotation = np.zeros(image.shape[:-1], dtype=np.uint8)
-        weight = np.ones(image.shape[:-1], np.float32)
+        weight = np.ones(annotation.shape, np.float32)
 
         for ann in self.ct.imgToAnns[coco_id]:
             poly = np.array(self.ct.anns[ann]['polygon'], np.int32).reshape((4, 2))
@@ -63,6 +63,37 @@ class CocoDataset(BatchDataset):
             else:
                 # 0 weight if it is illegible
                 cv2.fillConvexPoly(weight, poly, 0.0)
+
+        bboxes = np.array([
+            np.float32(self.ct.anns[ann]['bbox'])
+            for ann in self.ct.imgToAnns[coco_id] if ann != []
+        ])
+        expansion = 0.05
+        # Enlarge the bbox by expansion*2% of its size
+        # [x, y, w, h] => [x - w*0.05, y - h*0.5, w*1.05, h*1.05]
+        bboxes[:,:2] -= bboxes[:,2:] * expansion
+        bboxes[:,2:] *= (1 + expansion)
+
+        def intersection(ba, bb):
+            new_top = max(ba[1], bb[1])
+            new_left = max(ba[0], bb[0])
+            new_right = min(ba[0] + ba[2], bb[0] + bb[2])
+            new_bottom = min(ba[1] + ba[3], bb[1] + bb[3])
+            if new_top < new_bottom and new_left < new_right:
+                return [
+                    [new_left, new_top],
+                    [new_right, new_top],
+                    [new_right, new_bottom],
+                    [new_left, new_bottom]
+                ]
+            return None
+
+        for bbox in bboxes:
+            for other in bboxes:
+                if (bbox != other).all():
+                    inter = intersection(bbox, other)
+                    if inter is not None:
+                        cv2.fillConvexPoly(annotation, np.int32(inter), 127)
 
         return [image, annotation, weight]
 
@@ -92,5 +123,5 @@ class CocoDataset(BatchDataset):
         ann = np.random.choice(valid_anns)
         # extract bbox => x, y, w, h
         bbox_rect = np.int32(self.ct.anns[ann]['bbox'])
-        window = coco_utils.get_window(annotation.shape, bbox_rect)
+        window = coco_utils.get_window(annotation.shape[:2], bbox_rect)
         return coco_utils.crop_resize([image, annotation, weight], window, self.crop_size)

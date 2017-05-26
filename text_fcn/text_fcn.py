@@ -40,7 +40,7 @@ class TextFCN(object):
         self.weight = tf.placeholder(
             tf.float32, shape=[None, None, None, 1], name='weight')
 
-        self.prediction, self.logits = create_fcn(self.image, self.keep_prob, 2)
+        self.prediction, self.logits = create_fcn(self.image, self.keep_prob, 3)
 
         self.score = tf.nn.softmax(self.logits)
 
@@ -76,7 +76,7 @@ class TextFCN(object):
                 images, anns, weights, _ = train_set.next_batch()
                 # Transform to match NN inputs
                 images = images.astype(np.float32) / 255.
-                anns = anns.astype(np.int32) // 255
+                anns = anns.astype(np.int32) // 127
                 feed = {
                     self.image: images,
                     self.annotation: anns,
@@ -105,7 +105,7 @@ class TextFCN(object):
                         images, anns, weights, _ = val_set.next_batch()
                         # Transform to match NN inputs
                         images = images.astype(np.float32) / 255.
-                        anns = anns.astype(np.int32) // 255
+                        anns = anns.astype(np.int32) // 127
                         feed = {
                             self.image: images,
                             self.annotation: anns,
@@ -201,7 +201,7 @@ class TextFCN(object):
 
                 # Transform to match NN inputs
                 images = images.astype(np.float32) / 255.
-                anns = anns.astype(np.int32) // 255
+                anns = anns.astype(np.int32) // 127
                 feed = {
                     self.image: images,
                     self.annotation: anns,
@@ -225,7 +225,7 @@ class TextFCN(object):
                     out_dir,
                     name='input_%05d' % coco_ids)
                 tf_utils.save_image(
-                    (anns * 255).astype(np.uint8),
+                    (anns * 127).astype(np.uint8),
                     out_dir,
                     name='gt_%05d' % coco_ids)
                 tf_utils.save_image(
