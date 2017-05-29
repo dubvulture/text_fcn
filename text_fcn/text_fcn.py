@@ -241,23 +241,13 @@ class TextFCN(object):
                 score = np.mean(np.abs(score[:,:,:,0] - score[:,:,:,1]), axis=(1,2))
                 print('Score: %g' % score[0])
 
-    def _training_adam(self, lr, global_step):
+    def _training(self, lr, global_step):
         """
         Setup the training phase with Adam
         :param lr: initial learning rate
         :param global_step: global step of training
         """
         optimizer = tf.train.AdamOptimizer(lr)
-        grads = optimizer.compute_gradients(self.loss_op)
-        return optimizer.apply_gradients(grads, global_step=global_step)
-
-    def _training(self, lr, global_step):
-        """
-        Setup the training phase with SGD with momentum
-        :param lr:
-        :param global_step:
-        """
-        optimizer = tf.train.MomentumOptimizer(lr, 0.99)
         grads = optimizer.compute_gradients(self.loss_op)
         return optimizer.apply_gradients(grads, global_step=global_step)
 
