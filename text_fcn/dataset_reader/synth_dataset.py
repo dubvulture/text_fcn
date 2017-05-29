@@ -46,8 +46,16 @@ class SynthDataset(BatchDataset):
             annotation = np.zeros(image.shape[:-1], dtype=np.uint8)
             weight = np.ones(image.shape[:-1], dtype=np.float32)
 
-            for charBB in self.st[fname]['anns']:
+            for charBB in self.st[fname]['chars']:
                 cv2.fillConvexPoly(annotation, charBB.astype(np.int32), 255)
+
+            for wordBB in self.st[fname]['words']:
+                thick = int(max(2, 2))
+                cv2.drawContours(annotation,
+                                 wordBB.reshape((1,4,1,2)).astype(np.int32),
+                                 -1,
+                                 127,
+                                 thickness=thick)
 
             return [image, annotation, weight]
 
