@@ -68,6 +68,10 @@ class CocoDataset(BatchDataset):
             np.float32(self.ct.anns[ann]['bbox'])
             for ann in self.ct.imgToAnns[coco_id] if ann != []
         ])
+
+        if bboxes.shape[0] == 0:
+            return [image, annotation, weight]
+
         expansion = 0.05
         # Enlarge the bbox by expansion*2% of its size
         # [x, y, w, h] => [x - w*0.05, y - h*0.5, w*1.05, h*1.05]
