@@ -23,15 +23,15 @@ def create_fcn(placeholder, keep_prob, classes):
         ]
 
         for i, conv_shape in enumerate(conv_shapes):
-            W = tf_utils.weight_variable(
-                conv_shape, name='conv%d_w' % (i + 6))
-            b = tf_utils.bias_variable(
-                conv_shape[-1:], name='conv%d_b' % (i + 6))
-            output = tf_utils.conv2d_basic(output, W, b)
-            if i < 2:
-                output = tf.nn.relu(output, name='relu%d' % (i + 6))
-                tf_utils.add_activation_summary(output, collections=['train'])
-                output = tf.nn.dropout(output, keep_prob=keep_prob)
+            with tf.variable_scope('conv%d' % (i + 6)):
+                W = tf_utils.weight_variable(conv_shape)
+                b = tf_utils.bias_variable(conv_shape[-1:])
+                output = tf_utils.conv2d_basic(output, W, b)
+            with tf.variable_scope('relu%d' % (i + 6)):
+                if i < 2:
+                    output = tf.nn.relu(output)
+                    tf_utils.add_activation_summary(output, collections=['train'])
+                    output = tf.nn.dropout(output, keep_prob=keep_prob)
 
         pool4 = vgg_net['pool4']
         pool3 = vgg_net['pool3']
@@ -56,15 +56,15 @@ def create_fcn(placeholder, keep_prob, classes):
         strides = [2, 2, 8]
 
         for i in range(3):
-            W = tf_utils.weight_variable(
-                W_shapes[i], name='deconv_%d_w' % (i + 1))
-            b = tf_utils.bias_variable(
-                b_shapes[i], name='deconv_%d_b' % (i + 1))
-            output = tf_utils.conv2d_transpose_strided(
-                output, W, b,
-                output_shape=deconv_shapes[i], stride=strides[i])
-            if i < 2:
-                output = tf.add(output, vgg_net['pool%d' % (4 - i)])
+            with tf.variable_scope('deconv%d' % (i + 1)):
+                W = tf_utils.weight_variable(W_shapes[i])
+                b = tf_utils.bias_variable(b_shapes[i])
+                output = tf_utils.conv2d_transpose_strided(
+                    output, W, b,
+                    output_shape=deconv_shapes[i], stride=strides[i])
+            with tf.variable_scope('skip%d' % (i + 1)):
+                if i < 2:
+                    output = tf.add(output, vgg_net['pool%d' % (4 - i)])
 
         prediction = tf.argmax(output, dimension=3, name='prediction')
     return tf.expand_dims(prediction, dim=3), output
