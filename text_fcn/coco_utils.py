@@ -146,12 +146,34 @@ def crop_resize(images, window, size):
     dsize = (size, size)
     value = [0.0, 0.0, 1.0]
 
-    for i in range(3):
-        images[i] = images[i][window['slice']]
-        images[i] = np.pad(images[i],
-                           window['pad'] + pad[i],
-                           'constant',
-                           constant_values=value[i])
-        images[i] = cv2.resize(images[i], dsize, interpolation=interp[i])
+    images[0] = images[0][window['slice']]
+    images[0] = np.pad(images[0],
+                        window['pad'] + pad[0],
+                        'constant',
+                        constant_values=value[0])
+    images[0] = cv2.resize(images[0], dsize, interpolation=interp[0])
+
+    ann_fst = images[1][:,:,0][window['slice']]
+    ann_fst = np.pad(ann_fst,
+                     window['pad'] + pad[1],
+                     'constant',
+                     constant_values=value[1])
+    ann_fst = cv2.resize(ann_fst, dsize, interpolation=interp[1])
+
+    ann_snd = images[1][:,:,1][window['slice']]
+    ann_snd = np.pad(ann_snd,
+                     window['pad'] + pad[1],
+                     'constant',
+                     constant_values=value[1])
+    ann_snd = cv2.resize(ann_snd, dsize, interpolation=interp[1])
+
+    images[1] = np.dstack((ann_fst, ann_snd))
+
+    images[2] = images[2][window['slice']]
+    images[2] = np.pad(images[2],
+                       window['pad'] + pad[2],
+                       'constant',
+                       constant_values=value[2])
+    images[2] = cv2.resize(images[2], dsize, interpolation=interp[2])
 
     return images

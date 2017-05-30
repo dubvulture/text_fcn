@@ -46,25 +46,24 @@ def _setup_net(placeholder, weights, mean_pixel):
     global LAYERS
     for i, name in enumerate(LAYERS):
         kind = name[:4]
-        if kind == 'conv':
-            kernels, bias = weights[i][0][0][0][0]
-            # matconvnet: [width, height, in_channels, out_channels]
-            # tensorflow: [height, width, in_channels, out_channels]
-            kernels = tf_utils.get_variable(
-                np.transpose(kernels, (1, 0, 2, 3)),
-                name=name + "_w")
-            bias = tf_utils.get_variable(
-                bias.reshape(-1),
-                name=name + "_b")
-            placeholder = tf_utils.conv2d_basic(placeholder, kernels, bias)
-        elif kind == 'relu':
-            placeholder = tf.nn.relu(placeholder, name=name)
-            tf_utils.add_activation_summary(placeholder, collections=['train'])
-        elif kind == 'pool':
-            # VGG specifies max_pool... so why avg? Let's wait for response
-            placeholder = tf_utils.max_pool_2x2(placeholder)
-            # placeholder = tf_utils.avg_pool_2x2(placeholder)
-        net[name] = placeholder
+        with tf.variable_scope(name):
+            if kind == 'conv':
+                kernels, bias = weights[i][0][0][0][0]
+                # matconvnet: [width, height, in_channels, out_channels]
+                # tensorflow: [height, width, in_channels, out_channels]
+                kernels = tf_utils.get_variable(
+                    np.transpose(kernels, (1, 0, 2, 3)),
+                    name=name + "_w")
+                bias = tf_utils.get_variable(
+                    bias.reshape(-1),
+                    name=name + "_b")
+                placeholder = tf_utils.conv2d_basic(placeholder, kernels, bias)
+            elif kind == 'relu':
+                placeholder = tf.nn.relu(placeholder, name=name)
+                tf_utils.add_activation_summary(placeholder, collections=['train'])
+            elif kind == 'pool':
+                placeholder = tf_utils.max_pool_2x2(placeholder)
+            net[name] = placeholder
 
     return net
 

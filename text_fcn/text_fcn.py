@@ -36,13 +36,19 @@ class TextFCN(object):
         self.image = tf.placeholder(
             tf.float32, shape=[None, None, None, 3], name='image')
         self.annotation = tf.placeholder(
-            tf.int32, shape=[None, None, None, 1], name='annotation')
+            tf.int32, shape=[None, None, None, 2], name='annotation')
         self.weight = tf.placeholder(
             tf.float32, shape=[None, None, None, 1], name='weight')
 
-        self.prediction, self.logits = create_fcn(self.image, self.keep_prob, 3)
+        p1, l1, p2, l2 = create_fcn(self.image, self.keep_prob, 2)
 
-        self.score = tf.nn.softmax(self.logits)
+        self.prediction = [p1, p2]
+        self.logits = [l1, l2]
+
+        self.score = [
+            tf.nn.softmax(self.logits[0]),
+            tf.nn.softmax(self.logits[1])
+        ]
 
         global_step = tf.Variable(0, name='global_step', trainable=False)
         self.loss_op = self._loss()
@@ -76,7 +82,7 @@ class TextFCN(object):
                 images, anns, weights, _ = train_set.next_batch()
                 # Transform to match NN inputs
                 images = images.astype(np.float32) / 255.
-                anns = anns.astype(np.int32) // 127
+                anns = anns.astype(np.int32) // 255
                 feed = {
                     self.image: images,
                     self.annotation: anns,
@@ -105,7 +111,7 @@ class TextFCN(object):
                         images, anns, weights, _ = val_set.next_batch()
                         # Transform to match NN inputs
                         images = images.astype(np.float32) / 255.
-                        anns = anns.astype(np.int32) // 127
+                        anns = anns.astype(np.int32) // 255
                         feed = {
                             self.image: images,
                             self.annotation: anns,
@@ -201,7 +207,7 @@ class TextFCN(object):
 
                 # Transform to match NN inputs
                 images = images.astype(np.float32) / 255.
-                anns = anns.astype(np.int32) // 127
+                anns = anns.astype(np.int32) // 255
                 feed = {
                     self.image: images,
                     self.annotation: anns,
@@ -225,7 +231,7 @@ class TextFCN(object):
                     out_dir,
                     name='input_%05d' % coco_ids)
                 tf_utils.save_image(
-                    (anns * 127).astype(np.uint8),
+                    (anns * 255).astype(np.uint8),
                     out_dir,
                     name='gt_%05d' % coco_ids)
                 tf_utils.save_image(
@@ -233,13 +239,16 @@ class TextFCN(object):
                     out_dir,
                     name='pred_%05d' % coco_ids)
                 tf_utils.save_image(
-                    (score[0,:,:,1] * 255).astype(np.uint8),
+                    (score[0][0,:,:,1] * 255).astype(np.uint8),
                     out_dir,
-                    name='prob_%05d' % coco_ids)
+                    name='prob_text_%05d' % coco_ids)
+                tf_utils.save_image(
+                    (score[1][0,:,:,1] * 255).astype(np.uint8),
+                    out_dir,
+                    name='prob_bbox_%05d' % coco_ids)
 
                 print('Saved image: %d' % coco_ids)
-                score = np.mean(np.abs(score[:,:,:,0] - score[:,:,:,1]), axis=(1,2))
-                print('Score: %g' % score[0])
+                print('Score: %g' % np.mean(score))
 
     def _training(self, lr, global_step):
         """
@@ -255,11 +264,17 @@ class TextFCN(object):
         """
         Setup the loss function
         """
-        return tf.reduce_mean(
+        loss_1 = tf.reduce_mean(
             tf.losses.sparse_softmax_cross_entropy(
-                logits=self.logits,
-                labels=self.annotation,
+                logits=self.logits[0],
+                labels=self.annotation[:,:,:,:1],
                 weights=self.weight))
+        loss_2 = tf.reduce_mean(
+            tf.losses.sparse_softmax_cross_entropy(
+                logits=self.logits[1],
+                labels=self.annotation[:,:,:,1:2],
+                weights=self.weight))
+        return (loss_1 + loss_2) / 2.
 
     def _setup_supervisor(self, checkpoint):
         """

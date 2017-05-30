@@ -68,14 +68,14 @@ class BatchDataset(object):
         size = self.crop_size
 
         images = np.zeros((n, size, size, 3), dtype=np.uint8)
-        annotations = np.zeros((n, size, size, 1), dtype=np.uint8)
+        annotations = np.zeros((n, size, size, 2), dtype=np.uint8)
         weights = np.zeros((n, size, size, 1), dtype=np.float32)
         names = np.zeros(n, dtype=object)
 
         for i, name in enumerate(self.names[pos]):
             image, annotation, weight = self.image_op(*self._get_image(name), name=name)
             images[i] = image
-            annotations[i] = annotation[:, :, None]
+            annotations[i] = annotation
             weights[i] = weight[:, :, None]
             names[i] = name
 
@@ -95,7 +95,7 @@ class BatchDataset(object):
         # Add batch_dim + convert to floating point in [0,1]
         image = np.expand_dims(image, axis=0)
         # [None,:,:,None] ==> expand_dims(_, axis=[0,3]) // syntax not supported
-        annotation = annotation[None, :, :, None]
+        annotation = annotation[None, :, :]
         weight = weight[None, :, :, None]
         name = np.array([name])
 

@@ -51,14 +51,15 @@ class CocoDataset(BatchDataset):
         image = cv2.imread(
             os.path.join(self.coco_dir, 'images/', fname)
         )
-        annotation = np.zeros(image.shape[:-1], dtype=np.uint8)
-        weight = np.ones(annotation.shape, np.float32)
+        ann_fst = np.zeros(image.shape[:-1], dtype=np.uint8)
+        ann_snd = np.zeros(image.shape[:-1], dtype=np.uint8)
+        weight = np.ones(ann_fst.shape, np.float32)
 
         for ann in self.ct.imgToAnns[coco_id]:
             poly = np.array(self.ct.anns[ann]['polygon'], np.int32).reshape((4,2))
             if self.ct.anns[ann]['legibility'] == 'legible':
                 # draw only legible bbox/polygon
-                cv2.fillConvexPoly(annotation, poly, 255)
+                cv2.fillConvexPoly(ann_fst, poly, 255)
             else:
                 # 0 weight if it is illegible
                 cv2.fillConvexPoly(weight, poly, 0.0)
@@ -70,9 +71,9 @@ class CocoDataset(BatchDataset):
             if self.ct.anns[ann]['legibility'] == 'legible':
                 # thickness = minimum between 10% height and width
                 thick = int(max(2, np.min(bbox[2:] * 0.1)))
-                cv2.drawContours(annotation, poly.reshape((1,4,1,2)), -1, 127, thickness=thick)
+                cv2.drawContours(ann_snd, poly.reshape((1,4,1,2)), -1, 255, thickness=thick)
 
-        return [image, annotation, weight]
+        return [image, np.dstack((ann_fst, ann_snd)), weight]
 
     def _load_image(self, coco_id):
         """
