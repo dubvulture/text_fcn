@@ -23,15 +23,15 @@ def create_fcn(placeholder, keep_prob, classes):
         ]
 
         for i, conv_shape in enumerate(conv_shapes):
-            W = tf_utils.weight_variable(
-                conv_shape, name='conv%d_w' % (i + 6))
-            b = tf_utils.bias_variable(
-                conv_shape[-1:], name='conv%d_b' % (i + 6))
-            output = tf_utils.conv2d_basic(output, W, b)
-            if i < 2:
-                output = tf.nn.relu(output, name='relu%d' % (i + 6))
-                tf_utils.add_activation_summary(output, collections=['train'])
-                output = tf.nn.dropout(output, keep_prob=keep_prob)
+            with tf.variable_scope('conv%d' % (i + 6)):
+                W = tf_utils.weight_variable(conv_shape)
+                b = tf_utils.bias_variable(conv_shape[-1:])
+                output = tf_utils.conv2d_basic(output, W, b)
+            with tf.variable_scope('relu%d' % (i + 6)):
+                if i < 2:
+                    output = tf.nn.relu(output)
+                    tf_utils.add_activation_summary(output, collections=['train'])
+                    output = tf.nn.dropout(output, keep_prob=keep_prob)
 
         pool4 = vgg_net['pool4']
         pool3 = vgg_net['pool3']
