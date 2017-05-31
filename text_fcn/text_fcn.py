@@ -163,19 +163,20 @@ class TextFCN(object):
                 dy = pred.shape[1] - dy
                 dx = pred.shape[2] - dx
                 output = np.squeeze(pred, axis=(0,3))[:dy, :dx]
-                score = np.squeeze(score, axis=0)[:dy, :dx, 1]
+                score = np.squeeze(score, axis=0)[:dy, :dx]
                 out_dir = os.path.join(self.logs_dir, 'output/')
                 if not os.path.exists(out_dir):
                     os.makedirs(out_dir)
 
                 tf_utils.save_image(
-                    (output * 255).astype(np.uint8),
+                    (((score[:,:,2] - score[:,:,1]) > 0.5) * 255).astype(np.uint8),
                     out_dir,
                     name=fname + '_output')
                 tf_utils.save_image(
-                    (score * 255).astype(np.uint8),
+                    (score[:,:,2] * 255).astype(np.uint8),
                     out_dir,
                     name=fname + '_scores')
+
 
     def visualize(self, vis_set):
         """
@@ -245,8 +246,13 @@ class TextFCN(object):
                     out_dir,
                     name='prob_text_%05d' % coco_ids)
 
+                tf_utils.save_image(
+                    (((score[0,:,:,2] - score[0,:,:,1]) > 0.5) * 255).astype(np.uint8),
+                    out_dir,
+                    name='OK_%d' % coco_ids)
+
                 print('Saved image: %d' % coco_ids)
-                score = np.mean(np.abs(score[:,:,:,0] - score[:,:,:,1]), axis=(1,2))
+                score = np.mean(np.abs(score[:,:,:,2] - score[:,:,:,1]), axis=(1,2))
                 print('Score: %g' % score[0])
 
     def _training(self, lr, global_step):
