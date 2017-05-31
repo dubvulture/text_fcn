@@ -211,8 +211,8 @@ class TextFCN(object):
                 # squeeze dims and undo padding
                 dy = preds.shape[1] - dy
                 dx = preds.shape[2] - dx
-                preds = np.squeeze(preds, axis=(0,3))[:dy, :dx]
-                anns = np.squeeze(anns, axis=(0,3))[:dy, :dx]
+                preds = np.squeeze(preds, axis=0)[:dy, :dx]
+                anns = np.squeeze(anns, axis=0)[:dy, :dx]
                 images = np.squeeze(images, axis=0)[:dy, :dx]
                 coco_ids = np.squeeze(coco_ids, axis=0)
 
@@ -229,13 +229,21 @@ class TextFCN(object):
                     out_dir,
                     name='gt_%05d' % coco_ids)
                 tf_utils.save_image(
-                    (preds * 255).astype(np.uint8),
+                    (preds * 127).astype(np.uint8),
                     out_dir,
                     name='pred_%05d' % coco_ids)
                 tf_utils.save_image(
+                    (score[0,:,:,0] * 255).astype(np.uint8),
+                    out_dir,
+                    name='prob_back_%05d' % coco_ids)
+                tf_utils.save_image(
                     (score[0,:,:,1] * 255).astype(np.uint8),
                     out_dir,
-                    name='prob_%05d' % coco_ids)
+                    name='prob_bbox_%05d' % coco_ids)
+                tf_utils.save_image(
+                    (score[0,:,:,2] * 255).astype(np.uint8),
+                    out_dir,
+                    name='prob_text_%05d' % coco_ids)
 
                 print('Saved image: %d' % coco_ids)
                 score = np.mean(np.abs(score[:,:,:,0] - score[:,:,:,1]), axis=(1,2))
