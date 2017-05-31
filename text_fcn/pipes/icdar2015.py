@@ -22,8 +22,8 @@ def get_bboxes(image):
  
     # pad image in order to prevent closing "constriction"
     output = np.pad(image, (DIL, DIL), 'constant')
-    output = opening(output, structure=ONES, iterations=3).astype(np.uint8)
-    #output = closing(output, structure=ONES, iterations=1).astype(np.uint8)
+    #output = opening(output, structure=ONES, iterations=3).astype(np.uint8)
+    output = closing(output, structure=ONES, iterations=2).astype(np.uint8)
     # remove padding
     output = output[X:-X, X:-X]
     labels, num = label(output, structure=ONES)
@@ -40,7 +40,7 @@ def get_bboxes(image):
  
         bboxes = np.array(
             [
-                np.int32(cv2.cv.BoxPoints(cv2.minAreaRect(cnt))).ravel()
+                np.int32(cv2.boxPoints(cv2.minAreaRect(cnt))).ravel()
                 for cnt in cnts
             ],
             dtype=np.int32
