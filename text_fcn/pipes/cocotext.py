@@ -11,6 +11,7 @@ from scipy.ndimage.measurements import find_objects
 from scipy.ndimage.measurements import label
 from scipy.ndimage.measurements import labeled_comprehension as extract_feature
 from scipy.ndimage.morphology import binary_closing as closing
+from scipy.ndimage.morphology import binary_dilation as dilation
 
 from text_fcn.coco_text import coco_evaluation
 
@@ -21,14 +22,15 @@ def get_bboxes(image, probs):
     :param image: B/W image (values in {0, 255})
     :param probs: gray image representing pixelwise confidence
     """
-    MIN_AREA = 32
+    MIN_AREA = 8
     X = 3
     DIL = (X, X)
     ONES = np.ones(DIL, dtype=np.uint8)
 
     # pad image in order to prevent closing "constriction"
     output = np.pad(image, (DIL, DIL), 'constant')
-    output = closing(output, structure=ONES, iterations=3).astype(np.uint8)
+    #output = closing(output, structure=ONES, iterations=3).astype(np.uint8)
+    output = dilation(output, structure=ONES, iterations=1).astype(np.uint8)
     # remove padding
     output = output[X:-X, X:-X]
     labels, num = label(output, structure=ONES)

@@ -169,7 +169,7 @@ class TextFCN(object):
                     os.makedirs(out_dir)
 
                 tf_utils.save_image(
-                    (((score[:,:,2] - score[:,:,1]) > 0.5) * 255).astype(np.uint8),
+                    (((score[:,:,2] - score[:,:,1]) > 0) * 255).astype(np.uint8),
                     out_dir,
                     name=fname + '_output')
                 tf_utils.save_image(
@@ -246,14 +246,17 @@ class TextFCN(object):
                     out_dir,
                     name='prob_text_%05d' % coco_ids)
 
+                text = score[0,:,:,2]
+                bbox = score[0,:,:,1]
+                bbox[text > 0.5] = 0
+                my_pred = text - bbox
+                my_pred[my_pred < 0] = 0
                 tf_utils.save_image(
-                    (((score[0,:,:,2] - score[0,:,:,1]) > 0.5) * 255).astype(np.uint8),
+                    ((my_pred > 0.5) * 255).astype(np.uint8),
                     out_dir,
                     name='OK_%d' % coco_ids)
 
                 print('Saved image: %d' % coco_ids)
-                score = np.mean(np.abs(score[:,:,:,2] - score[:,:,:,1]), axis=(1,2))
-                print('Score: %g' % score[0])
 
     def _training(self, lr, global_step):
         """
