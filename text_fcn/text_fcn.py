@@ -166,22 +166,32 @@ class TextFCN(object):
                 print('Evaluated image\t' + fname)
 
                 # squeeze dims and undo padding
-                dy = pred.shape[1] - dy
-                dx = pred.shape[2] - dx
-                output = np.squeeze(pred, axis=(0,3))[:dy, :dx]
-                score = np.squeeze(score, axis=0)[:dy, :dx, 1]
+                dy = pred[0].shape[1] - dy
+                dx = pred[0].shape[2] - dx
+                output_1 = np.squeeze(pred[0], axis=(0,3))[:dy, :dx]
+                output_2 = np.squeeze(pred[1], axis=(0,3))[:dy, :dx]
+                score_1 = np.squeeze(score[0], axis=0)[:dy, :dx, 1]
+                score_2 = np.squeeze(score[0], axis=0)[:dy, :dx, 1]
                 out_dir = os.path.join(self.logs_dir, 'output/')
                 if not os.path.exists(out_dir):
                     os.makedirs(out_dir)
 
                 tf_utils.save_image(
-                    (output * 255).astype(np.uint8),
+                    (output_1 * 255).astype(np.uint8),
                     out_dir,
-                    name=fname + '_output')
+                    name=fname + '_output_text')
                 tf_utils.save_image(
-                    (score * 255).astype(np.uint8),
+                    (output_2 * 255).astype(np.uint8),
                     out_dir,
-                    name=fname + '_scores')
+                    name=fname + '_output_bbox')
+                tf_utils.save_image(
+                    (score_1 * 255).astype(np.uint8),
+                    out_dir,
+                    name=fname + '_scores_text')
+                tf_utils.save_image(
+                    (score_2 * 255).astype(np.uint8),
+                    out_dir,
+                    name=fname + '_scores_bbox')
 
     def visualize(self, vis_set):
         """
@@ -215,10 +225,14 @@ class TextFCN(object):
                 }
                 preds, score = sess.run([self.prediction, self.score], feed_dict=feed)
                 # squeeze dims and undo padding
-                dy = preds.shape[1] - dy
-                dx = preds.shape[2] - dx
-                preds = np.squeeze(preds, axis=(0,3))[:dy, :dx]
-                anns = np.squeeze(anns, axis=(0,3))[:dy, :dx]
+                dy = preds[0].shape[1] - dy
+                dx = preds[0].shape[2] - dx
+                pred_1 = np.squeeze(preds[0], axis=(0,3))[:dy, :dx]
+                pred_2 = np.squeeze(preds[1], axis=(0,3))[:dy, :dx]
+                ann_1 = np.squeeze(anns[:,:,:,:1], axis=(0,3))[:dy, :dx]
+                ann_2 = np.squeeze(anns[:,:,:,1:], axis=(0,3))[:dy, :dx]
+                score_1 = np.squeeze(score[0], axis=0)[:dy, :dx, 1]
+                score_2 = np.squeeze(score[1], axis=0)[:dy, :dx, 1]
                 images = np.squeeze(images, axis=0)[:dy, :dx]
                 coco_ids = np.squeeze(coco_ids, axis=0)
 
@@ -231,24 +245,38 @@ class TextFCN(object):
                     out_dir,
                     name='input_%05d' % coco_ids)
                 tf_utils.save_image(
-                    (anns * 255).astype(np.uint8),
+                    (ann_1 * 255).astype(np.uint8),
                     out_dir,
-                    name='gt_%05d' % coco_ids)
+                    name='gt_text_%05d' % coco_ids)
                 tf_utils.save_image(
-                    (preds * 255).astype(np.uint8),
+                    (ann_2 * 255).astype(np.uint8),
+                    out_dir,
+                    name='gt_bbox_%05d' % coco_ids)
+                tf_utils.save_image(
+                    (pred_1 * 255).astype(np.uint8),
+                    out_dir,
+                    name='pred_text_%05d' % coco_ids)
+                tf_utils.save_image(
+                    (pred_2 * 255).astype(np.uint8),
+                    out_dir,
+                    name='pred_bbox_%05d' % coco_ids)
+                tf_utils.save_image(
+                    (score_1 * 255).astype(np.uint8),
+                    out_dir,
+                    name='probs_text_%05d' % coco_ids)
+                tf_utils.save_image(
+                    (score_2 * 255).astype(np.uint8),
+                    out_dir,
+                    name='probs_bbox_%05d' % coco_ids)
+
+                pred = pred_1 - pred_2
+                pred[pred < 0] = 0
+                tf_utils.save_image(
+                    (pred * 255).astype(np.uint8),
                     out_dir,
                     name='pred_%05d' % coco_ids)
-                tf_utils.save_image(
-                    (score[0][0,:,:,1] * 255).astype(np.uint8),
-                    out_dir,
-                    name='prob_text_%05d' % coco_ids)
-                tf_utils.save_image(
-                    (score[1][0,:,:,1] * 255).astype(np.uint8),
-                    out_dir,
-                    name='prob_bbox_%05d' % coco_ids)
 
                 print('Saved image: %d' % coco_ids)
-                print('Score: %g' % np.mean(score))
 
     def _training(self, lr, global_step):
         """
