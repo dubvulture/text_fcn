@@ -168,30 +168,25 @@ class TextFCN(object):
                 # squeeze dims and undo padding
                 dy = pred[0].shape[1] - dy
                 dx = pred[0].shape[2] - dx
-                output_1 = np.squeeze(pred[0], axis=(0,3))[:dy, :dx]
-                output_2 = np.squeeze(pred[1], axis=(0,3))[:dy, :dx]
+                #output_1 = np.squeeze(pred[0], axis=(0,3))[:dy, :dx]
+                #output_2 = np.squeeze(pred[1], axis=(0,3))[:dy, :dx]
                 score_1 = np.squeeze(score[0], axis=0)[:dy, :dx, 1]
-                score_2 = np.squeeze(score[0], axis=0)[:dy, :dx, 1]
+                score_2 = np.squeeze(score[1], axis=0)[:dy, :dx, 1]
                 out_dir = os.path.join(self.logs_dir, 'output/')
                 if not os.path.exists(out_dir):
                     os.makedirs(out_dir)
 
+                pred = score_1 - score_2
+                pred[pred < 0.5] = 0
+                pred[pred >= 0.5] = 1
                 tf_utils.save_image(
-                    (output_1 * 255).astype(np.uint8),
+                    (pred * 255).astype(np.uint8),
                     out_dir,
-                    name=fname + '_output_text')
-                tf_utils.save_image(
-                    (output_2 * 255).astype(np.uint8),
-                    out_dir,
-                    name=fname + '_output_bbox')
+                    name=fname + '_output')
                 tf_utils.save_image(
                     (score_1 * 255).astype(np.uint8),
                     out_dir,
-                    name=fname + '_scores_text')
-                tf_utils.save_image(
-                    (score_2 * 255).astype(np.uint8),
-                    out_dir,
-                    name=fname + '_scores_bbox')
+                    name=fname + '_scores')
 
     def visualize(self, vis_set):
         """
