@@ -264,8 +264,9 @@ class TextFCN(object):
                     out_dir,
                     name='probs_bbox_%05d' % coco_ids)
 
-                pred = pred_1 - pred_2
-                pred[pred < 0] = 0
+                pred = score_1 - score_2
+                pred[pred < 0.5] = 0
+                pred[pred >= 0.5] = 1
                 tf_utils.save_image(
                     (pred * 255).astype(np.uint8),
                     out_dir,
