@@ -63,14 +63,70 @@ class CocoDataset(BatchDataset):
                 # 0 weight if it is illegible
                 cv2.fillConvexPoly(weight, poly, 0.0)
 
-        for ann in self.ct.imgToAnns[coco_id]:
-            poly = np.array(self.ct.anns[ann]['polygon'], np.int32)
-            bbox = np.array(self.ct.anns[ann]['bbox'], np.int32)
+        valid_anns = [
+            ann
+            for ann in self.ct.imgToAnns[coco_id]
+            if self.ct.anns[ann]['legibility'] == 'legible'
+        ]
+        intersected = []
+        from shapely.geometry import box as Box
+        from shapely.geometry import MultiPolygon, Polygon
+        boxes = np.array([np.array(self.ct.anns[ann]['bbox']) for ann in valid_anns])
+        boxes[:,2:] += boxes[:,:2]
+        polygons = [Box(*poly) for poly in boxes]
 
-            if self.ct.anns[ann]['legibility'] == 'legible':
-                # thickness = minimum between 10% height and width
-                thick = int(max(2, np.min(bbox[2:] * 0.1)))
-                cv2.drawContours(annotation, poly.reshape((1,4,1,2)), -1, 127, thickness=thick)
+        def draw_separation():
+            for i, poly1 in enumerate(polygons):
+                for j, poly2 in enumerate(polygons):
+                    if poly1.contains(poly2) or poly2.contains(poly1):
+                        intersected.append((i, j))
+                        intersected.append((j, i))
+                        continue
+                    if (poly1 is not poly2
+                        and (i, j) not in intersected
+                        and poly1.intersects(poly2)):
+                        # Intersect and draw line
+                        intersected.append((i, j))
+                        intersected.append((j, i))
+                        union = poly1.union(poly2)
+                        inter = poly1.intersection(poly2)
+                        if isinstance(union, MultiPolygon):
+                            continue
+                        verteces = np.transpose(union.exterior.coords.xy)[:-1]
+                        points = []
+                        for i in range(verteces.shape[0]):
+                            [x1, y1], [x2, y2], [x3, y3] = verteces[i-1],\
+                                                           verteces[i],\
+                                                           verteces[(i+1) % (verteces.shape[0])]
+                            if (x2 - x1)*(y3 - y2) - (x3 - x2)*(y2 - y1) > 0:
+                                # concave
+                                points.append(verteces[i])
+
+                        if len(points) == 4:
+                            continue
+                        elif len(points) == 1:
+                            inter = inter.exterior if isinstance(inter, Polygon) else inter
+                            coords = inter.coords.xy
+                            coords = np.transpose(coords)
+                            pos = np.argwhere(np.all(coords == points[0], axis=1))[0,0]
+                            opposite = coords[(pos + 1) % coords.shape[0]]
+                            points.append(opposite)
+                        elif len(points) == 0:
+                             #compute points
+                            continue
+
+                        assert len(points) == 2
+                        width = 5
+                        cv2.line(annotation, tuple(points[0].astype(np.int32)),
+                                 tuple(points[1].astype(np.int32)), 127, width)
+
+        max_expansion = 10
+        for _ in range(max_expansion):
+            draw_separation()
+            for i, box in enumerate(boxes):
+                boxes[i] += [-1, -1, 1, 1]
+                polygons[i] = Box(*box)
+
 
         return [image, annotation, weight]
 
