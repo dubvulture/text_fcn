@@ -164,7 +164,7 @@ if __name__ == '__main__':
         # After NN extract bboxes and evaluate with coco_text
         val = [chosen_text.imgs[coco_id]['file_name'][:-4] for coco_id in val]
         fcn.test(val, os.path.join(dataset_dir, 'images/'))
-        coco_pipe(chosen_text, args.logs_dir)
+        coco_pipe(chosen_text, args.logs_dir, mode='validation')
 
     elif args.mode == 'icdar':
         # After NN extract bboxes (orientated) and save for online evaluation
