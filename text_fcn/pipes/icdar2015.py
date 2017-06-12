@@ -6,8 +6,7 @@ import cv2
 import numpy as np
 from scipy.ndimage.measurements import label
 from scipy.ndimage.measurements import labeled_comprehension as extract_feature
-from scipy.ndimage.morphology import binary_closing as closing
-from scipy.ndimage.morphology import binary_opening as opening
+from scipy.ndimage.morphology import binary_dilation as dilation
 
 
 def get_bboxes(image):
@@ -22,8 +21,7 @@ def get_bboxes(image):
  
     # pad image in order to prevent closing "constriction"
     output = np.pad(image, (DIL, DIL), 'constant')
-    output = opening(output, structure=ONES, iterations=3).astype(np.uint8)
-    #output = closing(output, structure=ONES, iterations=1).astype(np.uint8)
+    output = dilation(output, structure=ONES, iterations=1).astype(np.uint8)
     # remove padding
     output = output[X:-X, X:-X]
     labels, num = label(output, structure=ONES)
@@ -37,10 +35,11 @@ def get_bboxes(image):
         cnts, _ = cv2.findContours(output.copy(),
                                    cv2.RETR_EXTERNAL,
                                    cv2.CHAIN_APPROX_SIMPLE)[-2:]
- 
+
+        boxPoints = cv2.boxPoints if cv2.__version__[0] == '3' else cv2.cv.BoxPoints
         bboxes = np.array(
             [
-                np.int32(cv2.cv.BoxPoints(cv2.minAreaRect(cnt))).ravel()
+                np.int32(boxPoints(cv2.minAreaRect(cnt))).ravel()
                 for cnt in cnts
             ],
             dtype=np.int32

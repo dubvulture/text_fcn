@@ -162,11 +162,9 @@ if __name__ == '__main__':
 
     elif args.mode == 'coco':
         # After NN extract bboxes and evaluate with coco_text
-        perm = np.random.randint(0, len(val), size=[1024])
         val = [chosen_text.imgs[coco_id]['file_name'][:-4] for coco_id in val]
-        val = np.array(val, dtype=object)[perm].tolist()
-        fcn.test(val, os.path.join(args.coco_dir, 'images/'))
-        coco_pipe(chosen_text, args.logs_dir)
+        fcn.test(val, os.path.join(dataset_dir, 'images/'))
+        coco_pipe(chosen_text, args.logs_dir, mode='validation')
 
     elif args.mode == 'icdar':
         # After NN extract bboxes (orientated) and save for online evaluation
