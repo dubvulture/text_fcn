@@ -18,19 +18,38 @@ class CocoDataset(BatchDataset):
                  ct,
                  coco_dir,
                  batch_size,
-                 crop_size=0,
+                 image_size,
+                 crop=False,
                  pre_saved=False):
         """
         :param coco_ids:
-        :param batch_size:
         :param ct: COCO_Text object instance
         :param coco_dir: directory to coco dataset
-        :param crop_size: window cropping size on each image (0 if none)
+        :param batch_size:
+        :param image_size: crop window size if pre_saved=False
+                           image size if pre_saved=True (0 if variable)
+        :param crop: whether to crop images to image_size
         :param pre_saved: whether to read images from storage or generate them on the go
+
+        Here's some examples
+            - pre_saved = True
+                - batch_size = 1, image_size = 0, crop = False
+                    Load images from storage and do not crop them.
+                - batch_size = X, image_size = Y, crop = False
+                    Load images from storage which are asserted to have the same size = image_size.
+                - batch_size = X, image_size = Y, crop = True
+                    Load images from storage and crop them to image_size.
+            - pre_saved = False
+                - batch_size = 1, image_size = 0, crop = False
+                    Generate images and do not crop them.
+                - batch_size = X, image_size = Y, crop = False
+                    Generate images which are asserted to have the same size = image_size.
+                - batch_size = X, image_size = Y, crop = True
+                    Generate images and crop them to image_size.
         """
         # crop only when crop_size if given AND images are not loaded from disk
-        crop_fun = self._crop_resize if crop_size > 0 and not pre_saved else None
-        BatchDataset.__init__(self, coco_ids, batch_size, crop_size, image_op=crop_fun)
+        crop_fun = self._crop_resize if crop else None
+        BatchDataset.__init__(self, coco_ids, batch_size, image_size, image_op=crop_fun)
 
         self.ct = ct
         self.coco_dir = coco_dir
@@ -47,16 +66,15 @@ class CocoDataset(BatchDataset):
         :param coco_id: image's coco id
         :return: image, its groundtruth w/o illegibles and its weights
         """
-        fname = self.ct.imgs[coco_id]['file_name']
+        fname = self.ct.imgs[coco_id]['file_name'][:-3] + 'png'
         image = cv2.imread(
             os.path.join(self.coco_dir, 'images/', fname)
         )
         annotation = np.zeros(image.shape[:-1], dtype=np.uint8)
-        weight = np.ones(image.shape[:-1], np.float32)
+        weight = np.ones(annotation.shape, np.float32)
 
         for ann in self.ct.imgToAnns[coco_id]:
-            poly = np.array(self.ct.anns[ann]['polygon'], np.int32).reshape((4, 2))
-
+            poly = np.array(self.ct.anns[ann]['polygon'], np.int32).reshape((4,2))
             if self.ct.anns[ann]['legibility'] == 'legible':
                 # draw only legible bbox/polygon
                 cv2.fillConvexPoly(annotation, poly, 255)
@@ -72,12 +90,12 @@ class CocoDataset(BatchDataset):
         """
         fname = 'COCO_train2014_%012d.png' % coco_id
         image = cv2.imread(
-            os.path.join(self.coco_dir, 'subset_validation/images/', fname))
+            os.path.join(self.coco_dir, 'images/', fname))
         annotation = cv2.imread(
-            os.path.join(self.coco_dir, 'subset_validation/anns/', fname))
+            os.path.join(self.coco_dir, 'anns/', fname))
         annotation = cv2.cvtColor(annotation, cv2.COLOR_BGR2GRAY)
         weight = cv2.imread(
-            os.path.join(self.coco_dir, 'subset_validation/weights', fname))
+            os.path.join(self.coco_dir, 'weights/', fname))
         weight = cv2.cvtColor(weight, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.
 
         return [image, annotation, weight]
@@ -92,5 +110,5 @@ class CocoDataset(BatchDataset):
         ann = np.random.choice(valid_anns)
         # extract bbox => x, y, w, h
         bbox_rect = np.int32(self.ct.anns[ann]['bbox'])
-        window = coco_utils.get_window(annotation.shape, bbox_rect)
-        return coco_utils.crop_resize([image, annotation, weight], window, self.crop_size)
+        window = coco_utils.get_window(annotation.shape[:2], bbox_rect)
+        return coco_utils.crop_resize([image, annotation, weight], window, self.image_size)

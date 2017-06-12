@@ -77,7 +77,6 @@ class IcdarDataset(BatchDataset):
         weight = np.ones(annotation.shape, np.float32)
 
         for poly in self.dt[fname]['words']:
-            print(poly.shape)
             cv2.fillConvexPoly(annotation, np.int32(poly), 255)
 
         return [image, annotation, weight]
