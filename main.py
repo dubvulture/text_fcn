@@ -138,7 +138,7 @@ if __name__ == '__main__':
         if args.val_freq > 0:
             if args.dataset == 'cocotext':
                 subset = os.listdir(os.path.join(
-                    dataset_dir, 'word_division_val/'))
+                    dataset_dir, 'word_division_val/images'))
                 subset = [int(i[15:-4]) for i in subset]
             else: # args.dataset == 'synthtext'
                 subset = [
@@ -149,7 +149,7 @@ if __name__ == '__main__':
             # Load from storage already cropped to image_size
             val_set = val_set or Dataset(subset,
                                          chosen_text,
-                                         dataset_dir,
+                                         os.path.join(dataset_dir, 'word_division_val/'),
                                          args.batch_size,
                                          args.image_size,
                                          crop=False,
