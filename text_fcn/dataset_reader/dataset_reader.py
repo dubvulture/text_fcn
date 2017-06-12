@@ -7,11 +7,12 @@ import numpy as np
 
 class BatchDataset(object):
 
-    def __init__(self, names, batch_size, crop_size, image_op=None):
+    def __init__(self, names, batch_size, image_size, image_op=None):
         """
         Intialize a generic file reader with batching for list of files
         :param names: list of ids/names/files for the dataset reader
         :param batch_size: size of batch
+        :param image_size:
         :param image_op:
         """
         print('Initializing Batch Dataset Reader...')
@@ -21,7 +22,7 @@ class BatchDataset(object):
         self.batch_offset = 0
         self.epoch = 1
         self.batch_size = batch_size
-        self.crop_size = crop_size
+        self.image_size = image_size
         # image_op passed to constructor or identity function
         self.image_op = image_op or (lambda *args, **kwargs: args)
 
@@ -30,7 +31,7 @@ class BatchDataset(object):
         else:
             self._read_batch = self._batch_read
 
-        print('Crop size: %d\nBatch size: %d' % (self.crop_size, self.batch_size))
+        print('Image size: %d\nBatch size: %d' % (self.image_size, self.batch_size))
 
     def next_batch(self):
         if (self.batch_offset + self.batch_size) > self.size:
@@ -65,7 +66,7 @@ class BatchDataset(object):
         """
 
         n = pos.stop - pos.start
-        size = self.crop_size
+        size = self.image_size
 
         images = np.zeros((n, size, size, 3), dtype=np.uint8)
         annotations = np.zeros((n, size, size, 1), dtype=np.uint8)

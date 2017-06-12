@@ -18,19 +18,38 @@ class SynthDataset(BatchDataset):
                      st,
                      synth_dir,
                      batch_size,
-                     crop_size=0,
+                     image_size,
+                     crop=False,
                      pre_saved=False):
             """
-            :param fnames: 
-            :param st: 
-            :param synth_dir: 
-            :param batch_size: 
-            :param crop_size: 
-            :param pre_saved: 
+            :param fnames:
+            :param st:
+            :param synth_dir:
+            :param batch_size:
+            :param image_size: crop window size if pre_saved=False
+                               image size if pre_saved=True (0 if variable)
+            :param crop: whether to crop images to image_size
+            :param pre_saved: whether to read images from storage or generate them on the go
+
+            Here's some examples
+                - pre_saved = True
+                    - batch_size = 1, image_size = 0, crop = False
+                        Load images from storage and do not crop them.
+                    - batch_size = X, image_size = Y, crop = False
+                        Load images from storage which are asserted to have the same size = image_size.
+                    - batch_size = X, image_size = Y, crop = True
+                        Load images from storage and crop them to image_size.
+                - pre_saved = False
+                    - batch_size = 1, image_size = 0, crop = False
+                        Generate images and do not crop them.
+                    - batch_size = X, image_size = Y, crop = False
+                        Generate images which are asserted to have the same size = image_size.
+                    - batch_size = X, image_size = Y, crop = True
+                        Generate images and crop them to image_size.
             """
             # crop only when crop_size if given AND images are not loaded from disk
-            crop_fun = self._crop_resize if crop_size > 0 and not pre_saved else None
-            BatchDataset.__init__(self, fnames, batch_size, crop_size, image_op=crop_fun)
+            crop_fun = self._crop_resize if crop else None
+            BatchDataset.__init__(self, fnames, batch_size, image_size, image_op=crop_fun)
 
             self.st = st
             self.synth_dir = synth_dir
@@ -78,4 +97,4 @@ class SynthDataset(BatchDataset):
             bbox = cv2.boundingRect(np.expand_dims(bbox, axis=1))
             bbox = np.int32(bbox)
             window = coco_utils.get_window(annotation.shape, bbox)
-            return coco_utils.crop_resize([image, annotation, weight], window, self.crop_size)
+            return coco_utils.crop_resize([image, annotation, weight], window, self.image_size)
