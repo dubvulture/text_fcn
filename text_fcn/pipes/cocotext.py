@@ -2,15 +2,17 @@ from __future__ import absolute_import
 from __future__ import division
 from six.moves import range
 
+from collections import defaultdict
 import os
 import json
+import zipfile
 
 import cv2
 import numpy as np
 from scipy.ndimage.measurements import find_objects
 from scipy.ndimage.measurements import label
 from scipy.ndimage.measurements import labeled_comprehension as extract_feature
-from scipy.ndimage.morphology import binary_closing as closing
+from scipy.ndimage.morphology import binary_dilation as dilation
 
 from text_fcn.coco_text import coco_evaluation
 
@@ -28,7 +30,7 @@ def get_bboxes(image, probs):
 
     # pad image in order to prevent closing "constriction"
     output = np.pad(image, (DIL, DIL), 'constant')
-    output = closing(output, structure=ONES, iterations=3).astype(np.uint8)
+    output = dilation(output, structure=ONES, iterations=1).astype(np.uint8)
     # remove padding
     output = output[X:-X, X:-X]
     labels, num = label(output, structure=ONES)
@@ -55,10 +57,11 @@ def get_bboxes(image, probs):
     return bboxes, scores
 
 
-def coco_pipe(coco_text, in_dir):
+def coco_pipe(coco_text, in_dir, mode='validation'):
     """
     :param coco_text: COCO_Text instance
     :param in_dir:
+    :param mode:
     """
     directory = os.path.join(in_dir, 'output/')
     fnames = [
@@ -107,8 +110,35 @@ def coco_pipe(coco_text, in_dir):
     with open(os.path.join(res_dir, 'results.json'), 'w') as f:
         json.dump(jsonarr, f, indent=4)
 
-    ct_res = coco_text.loadRes(jsonarr)
-    imgIds = [pred['image_id'] for pred in jsonarr]
-    detections = coco_evaluation.getDetections(
-        coco_text, ct_res, imgIds=imgIds, detection_threshold=0.5)
-    coco_evaluation.printDetailedResults(coco_text, detections, None, 'FCN')
+    if mode == 'validation':
+        ct_res = coco_text.loadRes(jsonarr)
+        imgIds = [pred['image_id'] for pred in jsonarr]
+        detections = coco_evaluation.getDetections(
+            coco_text, ct_res, imgIds=imgIds, detection_threshold=0.5)
+        coco_evaluation.printDetailedResults(coco_text, detections, None, 'FCN')
+    elif mode == 'test':
+        with open(os.path.join(directory, 'res/results.json'), 'r') as f:
+            jsonarr = json.load(f)
+
+        struct = defaultdict(list)
+
+        for box in jsonarr:
+            res = box['bbox']
+            res.append(box['score'])
+            struct[box['image_id']].append(res)
+
+        files = []
+        for coco_id, boxes in struct.items():
+            file = os.path.join(directory, 'res_%d.txt' % coco_id)
+            files.append(file)
+            with open(file, 'w') as f:
+                for res in boxes:
+                    res = np.array(res)
+                    res[[2, 3]] += res[:2]
+                    x1, y1, x2, y2, score = res
+                    f.write('%d,%d,%d,%d,%f\r\n' % (x1, y1, x2, y2, score))
+
+        for f in files:
+            with zipfile.ZipFile(os.path.join(directory, 'res/results.zip'), 'w') as zip:
+                zip.write(f)
+            os.remove(f)
