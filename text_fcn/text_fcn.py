@@ -234,25 +234,19 @@ class TextFCN(object):
                     out_dir,
                     name='pred_%05d' % coco_ids)
                 tf_utils.save_image(
-                    (score[0,:,:,0] * 255).astype(np.uint8),
-                    out_dir,
-                    name='prob_back_%05d' % coco_ids)
-                tf_utils.save_image(
                     (score[0,:,:,1] * 255).astype(np.uint8),
                     out_dir,
-                    name='prob_bbox_%05d' % coco_ids)
+                    name='prob_div_%05d' % coco_ids)
                 tf_utils.save_image(
                     (score[0,:,:,2] * 255).astype(np.uint8),
                     out_dir,
                     name='prob_text_%05d' % coco_ids)
 
-                text = score[0,:,:,2]
-                bbox = score[0,:,:,1]
-                bbox[text > 0.5] = 0
-                my_pred = text - bbox
-                my_pred[my_pred < 0] = 0
+                my_pred = score[0,:,:,2] - score[0,:,:,1]
+                my_pred[my_pred < 0.5] = 0
+                my_pred[my_pred >= 0.5] = 1
                 tf_utils.save_image(
-                    ((my_pred > 0.5) * 255).astype(np.uint8),
+                    (my_pred * 255).astype(np.uint8),
                     out_dir,
                     name='OK_%d' % coco_ids)
 
