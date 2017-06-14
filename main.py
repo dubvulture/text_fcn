@@ -166,7 +166,7 @@ if __name__ == '__main__':
         # of images written in args.id_list
         with open(args.id_list, 'rb') as f:
             ids = [int(line) for line in f if line.strip() != '']
-        ids_set = CocoDataset(ids, chosen_text, dataset_dir, batch_size=1)
+        ids_set = CocoDataset(ids, chosen_text, dataset_dir, batch_size=1, image_size=0)
         fcn.visualize(ids_set)
 
     elif args.mode == 'test':

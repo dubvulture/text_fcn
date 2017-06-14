@@ -90,9 +90,10 @@ class CocoDataset(BatchDataset):
             for ann in self.ct.imgToAnns[coco_id]
             if self.ct.anns[ann]['legibility'] == 'legible'
         ]
-        boxes = np.array([np.float32(self.ct.anns[ann]['bbox']) for ann in valid_anns])
-        boxes[:,2:] += boxes[:,:2]
-        self._draw_separation(annotation, boxes, max_expansion=5)
+        if len(valid_anns) > 0:
+            boxes = np.array([np.float32(self.ct.anns[ann]['bbox']) for ann in valid_anns])
+            boxes[:,2:] += boxes[:,:2]
+            self._draw_separation(annotation, boxes, max_expansion=5)
 
         return [image, annotation, weight]
 
