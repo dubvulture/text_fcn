@@ -125,13 +125,20 @@ if __name__ == '__main__':
 
     if args.mode == 'train':
         save_run()
-        train_set = train_set or Dataset(train, chosen_text, dataset_dir, args.batch_size, args.image_size)
+        # Load from storage and crop them to image_size
+        train_set = train_set or Dataset(train,
+                                         chosen_text,
+                                         os.path.join(dataset_dir, 'word_division_train/'),
+                                         args.batch_size,
+                                         args.image_size,
+                                         crop=True,
+                                         pre_saved=True)
         # We want to keep track of validation loss on an almost constant dataset
         # => load previously saved images/gt/weights
         if args.val_freq > 0:
             if args.dataset == 'cocotext':
                 subset = os.listdir(os.path.join(
-                    dataset_dir, 'subset_validation/images/'))
+                    dataset_dir, 'word_division_val/'))
                 subset = [int(i[15:-4]) for i in subset]
             else: # args.dataset == 'synthtext'
                 subset = [
@@ -139,8 +146,14 @@ if __name__ == '__main__':
                     for root, _, files in os.walk(os.path.join(dataset_dir, 'subset_validation/images'))
                     for fname in files
                 ]
-            val_set = val_set or Dataset(
-                subset, chosen_text, dataset_dir, args.batch_size, args.image_size, pre_saved=True)
+            # Load from storage already cropped to image_size
+            val_set = val_set or Dataset(subset,
+                                         chosen_text,
+                                         dataset_dir,
+                                         args.batch_size,
+                                         args.image_size,
+                                         crop=False,
+                                         pre_saved=True)
 
         # We pass val_set (if given) to keep track of its loss
         fcn.train(train_set,
