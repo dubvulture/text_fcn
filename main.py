@@ -137,8 +137,7 @@ if __name__ == '__main__':
         # => load previously saved images/gt/weights
         if args.val_freq > 0:
             if args.dataset == 'cocotext':
-                subset = os.listdir(os.path.join(
-                    dataset_dir, 'word_division_val/'))
+                subset = os.listdir(os.path.join(dataset_dir, 'subset_validation/images'))
                 subset = [int(i[15:-4]) for i in subset]
             else: # args.dataset == 'synthtext'
                 subset = [
