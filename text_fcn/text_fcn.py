@@ -147,7 +147,7 @@ class TextFCN(object):
         with self.sv.managed_session() as sess:
             for i, fname in enumerate(filenames):
                 in_path = os.path.join(directory, fname)
-                in_image = cv2.imread(in_path + '.jpg')
+                in_image = cv2.imread(in_path + '.png')
                 # pad image to the nearest multiple of 32
                 dy, dx = tf_utils.get_pad(in_image)
                 in_image = tf_utils.pad(in_image, dy, dx)
@@ -168,8 +168,11 @@ class TextFCN(object):
                 if not os.path.exists(out_dir):
                     os.makedirs(out_dir)
 
+                my_pred = score[:,:,2] - score[:,:,1]
+                my_pred[my_pred < 0.5] = 0
+                my_pred[my_pred >= 0.5] = 1
                 tf_utils.save_image(
-                    (((score[:,:,2] - score[:,:,1]) > 0) * 255).astype(np.uint8),
+                    (my_pred * 255).astype(np.uint8),
                     out_dir,
                     name=fname + '_output')
                 tf_utils.save_image(
