@@ -128,11 +128,11 @@ if __name__ == '__main__':
         # Load from storage and crop them to image_size
         train_set = train_set or Dataset(train,
                                          chosen_text,
-                                         os.path.join(dataset_dir, 'word_division_train/'),
+                                         dataset_dir,
                                          args.batch_size,
                                          args.image_size,
                                          crop=True,
-                                         pre_saved=True)
+                                         pre_saved=False)
         # We want to keep track of validation loss on an almost constant dataset
         # => load previously saved images/gt/weights
         if args.val_freq > 0:
@@ -149,7 +149,7 @@ if __name__ == '__main__':
             # Load from storage already cropped to image_size
             val_set = val_set or Dataset(subset,
                                          chosen_text,
-                                         dataset_dir,
+                                         os.path.join(dataset_dir, 'subset_validation/'),
                                          args.batch_size,
                                          args.image_size,
                                          crop=False,
