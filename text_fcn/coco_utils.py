@@ -51,7 +51,29 @@ def synth_read_dataset(st):
         key for key in st
         if st[key]['set'] == 'val'
     ]
+
     return train, val, None
+
+
+def icdar_read_dataset(dt):
+    """
+    Returns train and validation dataset filenames list (no extension)
+    :param st: ICDAR2015 .npy
+    """
+    train = [
+        key for key in dt
+        if dt[key]['set'] == 'train'
+    ]
+    val = [
+        key for key in dt
+        if dt[key]['set'] == 'val'
+    ]
+    test = [
+        key for key in dt
+        if dt[key]['set'] == 'test'
+    ]
+
+    return train, val, test
 
 
 def maybe_download_and_extract(dir_path, url_name, is_tarfile=False, is_zipfile=False):

@@ -15,7 +15,7 @@ from text_fcn import coco_utils
 from text_fcn import TextFCN
 from text_fcn.coco_text import COCO_Text
 from text_fcn.dataset_reader import CocoDataset
-from text_fcn.dataset_reader import SynthDataset
+from text_fcn.dataset_reader import IcdarDataset
 from text_fcn.pipes import coco_pipe, icdar_pipe
 
 
@@ -31,7 +31,7 @@ parser.add_argument('--save_freq', type=int, default=500, help='save model every
 parser.add_argument('--train_freq', type=int, default=20, help='trace train_loss every train_freq')
 parser.add_argument('--val_freq', type=int, default=0, help='trace val_loss every val_freq')
 parser.add_argument('--id_list', help='text file containing images\' coco ids to visualize')
-parser.add_argument('--dataset', default='cocotext', choices=['cocotext', 'synthtext'], help='which dataset')
+parser.add_argument('--dataset', default='cocotext', choices=['cocotext', 'icdartext'], help='which dataset')
 
 args = parser.parse_args()
 
@@ -70,9 +70,9 @@ if __name__ == '__main__':
     if args.dataset == 'cocotext':
         Dataset = CocoDataset
         dataset_dir = 'COCO_Text/'
-    else: # args.dataset == 'synthtext'
-        Dataset = SynthDataset
-        dataset_dir = 'Synth_Text/'
+    else: # args.dataset == 'icdartext'
+        Dataset = IcdarDataset
+        dataset_dir = 'ICDAR2015/'
 
     dataset_dir = os.path.abspath(dataset_dir) + '/'
     args.logs_dir = os.path.abspath(args.logs_dir) + '/'
@@ -106,7 +106,7 @@ if __name__ == '__main__':
         val_freq=args.val_freq,
         save_freq=args.save_freq)
 
-    # Train + Val both with COCO_Text and Synth_Text
+    # Train + Val both with COCO_Text and Icdar2015
     # Visualize & Test & Coco require COCO_Text
     # Icdar is unbound
     if ((args.mode in ['train', 'test'] and args.dataset == 'cocotext')
@@ -114,10 +114,10 @@ if __name__ == '__main__':
         coco_utils.maybe_download_and_extract(dataset_dir, coco_utils.URL, is_zipfile=True)
         chosen_text = COCO_Text(os.path.join(dataset_dir, 'COCO_Text.json'))
         read_dataset = coco_utils.coco_read_dataset
-    elif args.mode == 'train' and args.dataset == 'synthtext':
+    elif args.mode == 'train' and args.dataset == 'icdartext':
         # args.dataset_dir == 'Synth_Text/'
-        chosen_text = np.load(os.path.join(dataset_dir, 'synth.npy'))[()]
-        read_dataset = coco_utils.synth_read_dataset
+        chosen_text = np.load(os.path.join(dataset_dir, 'icdar2015.npy'))[()]
+        read_dataset = coco_utils.icdar_read_dataset
     else:
         print('???')
 
@@ -139,12 +139,8 @@ if __name__ == '__main__':
             if args.dataset == 'cocotext':
                 subset = os.listdir(os.path.join(dataset_dir, 'subset_validation/images/'))
                 subset = [int(i[15:-4]) for i in subset]
-            else: # args.dataset == 'synthtext'
-                subset = [
-                    '/'.join(os.path.join(root, fname).split('/')[-2:])[:-4]
-                    for root, _, files in os.walk(os.path.join(dataset_dir, 'subset_validation/images'))
-                    for fname in files
-                ]
+            else: # args.dataset == 'icdar_text'
+                raise NotImplementedError
             # Load from storage already cropped to image_size
             val_set = val_set or Dataset(subset,
                                          chosen_text,
@@ -165,7 +161,7 @@ if __name__ == '__main__':
         # of images written in args.id_list
         with open(args.id_list, 'rb') as f:
             ids = [int(line) for line in f if line.strip() != '']
-        ids_set = CocoDataset(ids, chosen_text, dataset_dir, batch_size=1)
+        ids_set = CocoDataset(ids, chosen_text, dataset_dir, batch_size=1, image_size=0)
         fcn.visualize(ids_set)
 
     elif args.mode == 'test':

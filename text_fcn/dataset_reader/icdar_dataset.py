@@ -67,11 +67,8 @@ class IcdarDataset(BatchDataset):
         :return: image, its groundtruth, and its weights
         """
         filename = fname + '.png'
-        if self.dt[fname]['set'] == 'test':
-            filename = 't_' + filename
-
         image = cv2.imread(
-            os.path.join(self.icdar_dir, filename)
+            os.path.join(self.icdar_dir, 'images/', filename)
         )
         annotation = np.zeros(image.shape[:-1], dtype=np.uint8)
         weight = np.ones(annotation.shape, np.float32)
@@ -86,8 +83,6 @@ class IcdarDataset(BatchDataset):
         Load image already saved on the disk
         """
         filename = fname + '.png'
-        if self.dt[fname]['set'] == 'test':
-            filename = 't_' + filename
 
         image = cv2.imread(
             os.path.join(self.icdar_dir, 'images/', filename))
