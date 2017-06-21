@@ -67,11 +67,9 @@ class IcdarDataset(BatchDataset):
         :return: image, its groundtruth, and its weights
         """
         filename = fname + '.png'
-        if self.dt[fname]['set'] == 'test':
-            filename = 't_' + filename
 
         image = cv2.imread(
-            os.path.join(self.icdar_dir, filename)
+            os.path.join(self.icdar_dir, 'images/', filename)
         )
         ann_fst = np.zeros(image.shape[:-1], dtype=np.uint8)
         ann_snd = np.zeros(image.shape[:-1], dtype=np.uint8)
@@ -81,11 +79,14 @@ class IcdarDataset(BatchDataset):
             poly = np.int32(poly)
             # Draw text area
             cv2.fillConvexPoly(ann_fst, poly, 255)
+
+        for poly in self.dt[fname]['words']:
+            poly = np.int32(poly)
             bbox = cv2.boundingRect(np.expand_dims(poly, axis=1))
             # thickness = minimum between 10% height and width
             thick = int(max(2, np.min(np.array(bbox[2:]) * 0.1)))
             # Draw bounding box
-            cv2.drawContours(ann_snd, poly.reshape((1,4,1,2)), -1, 255, thickness=thick)
+            cv2.drawContours(ann_snd, poly.reshape((1,4,1,2)), -1, 127, thickness=thick)
 
         return [image, np.dstack((ann_fst, ann_snd)), weight]
 
@@ -94,8 +95,6 @@ class IcdarDataset(BatchDataset):
         Load image already saved on the disk
         """
         filename = fname + '.png'
-        if self.dt[fname]['set'] == 'test':
-            filename = 't_' + filename
 
         image = cv2.imread(
             os.path.join(self.icdar_dir, 'images/', filename))
