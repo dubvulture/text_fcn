@@ -23,7 +23,8 @@ class CocoDataset(BatchDataset):
                  batch_size,
                  image_size,
                  crop=False,
-                 pre_saved=False):
+                 pre_saved=False,
+                 augment_data=True):
         """
         :param coco_ids:
         :param ct: COCO_Text object instance
@@ -33,6 +34,7 @@ class CocoDataset(BatchDataset):
                            image size if pre_saved=True (0 if variable)
         :param crop: whether to crop images to image_size
         :param pre_saved: whether to read images from storage or generate them on the go
+        :param augment_data: wheter to rotate&shuffle_bgr images
 
         Here's some examples
             - pre_saved = True
@@ -52,7 +54,12 @@ class CocoDataset(BatchDataset):
         """
         # crop only when crop_size if given AND images are not loaded from disk
         crop_fun = self._crop_resize if crop else None
-        BatchDataset.__init__(self, coco_ids, batch_size, image_size, image_op=crop_fun)
+        BatchDataset.__init__(self,
+                              coco_ids,
+                              batch_size,
+                              image_size,
+                              image_op=crop_fun,
+                              augment_data=augment_data)
 
         self.ct = ct
         self.coco_dir = coco_dir
