@@ -20,7 +20,8 @@ class IcdarDataset(BatchDataset):
                  batch_size,
                  image_size,
                  crop=False,
-                 pre_saved=False):
+                 pre_saved=False,
+                 augment_data=False):
         """
         :param fnames:
         :param dt: ICDAR2015 npy loaded

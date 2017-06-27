@@ -76,7 +76,7 @@ class CocoDataset(BatchDataset):
         :param coco_id: image's coco id
         :return: image, its groundtruth w/o illegibles and its weights
         """
-        fname = self.ct.imgs[coco_id]['file_name'][:-3] + 'png'
+        fname = self.ct.imgs[coco_id]['file_name']
         image = cv2.imread(
             os.path.join(self.coco_dir, 'images/', fname)
         )
@@ -108,14 +108,14 @@ class CocoDataset(BatchDataset):
         """
         Load image already saved on the disk
         """
-        fname = 'COCO_train2014_%012d.png' % coco_id
+        fname = 'COCO_train2014_%012d.' % coco_id
         image = cv2.imread(
-            os.path.join(self.coco_dir, 'images/', fname))
+            os.path.join(self.coco_dir, 'images/', fname + 'jpg'))
         annotation = cv2.imread(
-            os.path.join(self.coco_dir, 'anns/', fname))
+            os.path.join(self.coco_dir, 'anns/', fname + 'png'))
         annotation = cv2.cvtColor(annotation, cv2.COLOR_BGR2GRAY)
         weight = cv2.imread(
-            os.path.join(self.coco_dir, 'weights/', fname))
+            os.path.join(self.coco_dir, 'weights/', fname + 'png'))
         weight = cv2.cvtColor(weight, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.
 
         return [image, annotation, weight]
