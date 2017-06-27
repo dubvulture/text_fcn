@@ -94,7 +94,7 @@ class BatchDataset(object):
             image, annotation, weight = self.image_op(*self._get_image(name), name=name)
             if self.augment_data:
                 angle = np.random.randint(-45, 46)
-                image = rotate(shuffle_bgr(image), angle)
+                image = rotate(image, angle)
                 annotation = rotate(annotation, angle)
             images[i] = image
             annotations[i] = annotation[:, :, None]
@@ -115,7 +115,7 @@ class BatchDataset(object):
         image, annotation, weight = self.image_op(*self._get_image(name), name=name)
         if self.augment_data:
             angle = np.random.randint(-45, 46)
-            image = rotate(shuffle_bgr(image), angle)
+            image = rotate(image, angle)
             annotation = rotate(annotation, angle)
         # Add batch_dim + convert to floating point in [0,1]
         image = np.expand_dims(image, axis=0)

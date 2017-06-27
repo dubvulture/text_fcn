@@ -132,7 +132,8 @@ if __name__ == '__main__':
                                          args.batch_size,
                                          args.image_size,
                                          crop=True,
-                                         pre_saved=False)
+                                         pre_saved=False,
+                                         augment_data=True)
         # We want to keep track of validation loss on an almost constant dataset
         # => load previously saved images/gt/weights
         if args.val_freq > 0:
@@ -148,7 +149,8 @@ if __name__ == '__main__':
                                          args.batch_size,
                                          args.image_size,
                                          crop=False,
-                                         pre_saved=True)
+                                         pre_saved=True,
+                                         augment_data=False)
 
         # We pass val_set (if given) to keep track of its loss
         fcn.train(train_set,

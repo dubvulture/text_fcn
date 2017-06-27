@@ -73,7 +73,7 @@ class CocoDataset(BatchDataset):
         :param coco_id: image's coco id
         :return: image, its groundtruth w/o illegibles and its weights
         """
-        fname = self.ct.imgs[coco_id]['file_name'][:-3] + 'png'
+        fname = self.ct.imgs[coco_id]['file_name']
         image = cv2.imread(
             os.path.join(self.coco_dir, 'images/', fname)
         )
