@@ -116,29 +116,19 @@ def coco_pipe(coco_text, in_dir, mode='validation'):
         detections = coco_evaluation.getDetections(
             coco_text, ct_res, imgIds=imgIds, detection_threshold=0.5)
         coco_evaluation.printDetailedResults(coco_text, detections, None, 'FCN')
-    elif mode == 'test':
-        with open(os.path.join(directory, 'res/results.json'), 'r') as f:
-            jsonarr = json.load(f)
 
-        struct = defaultdict(list)
+    struct = defaultdict(list)
 
-        for box in jsonarr:
-            res = box['bbox']
-            res.append(box['score'])
-            struct[box['image_id']].append(res)
+    for box in jsonarr:
+        res = box['bbox']
+        res.append(box['score'])
+        struct[box['image_id']].append(res)
 
-        files = []
-        for coco_id, boxes in struct.items():
-            file = os.path.join(directory, 'res_%d.txt' % coco_id)
-            files.append(file)
-            with open(file, 'w') as f:
-                for res in boxes:
-                    res = np.array(res)
-                    res[[2, 3]] += res[:2]
-                    x1, y1, x2, y2, score = res
-                    f.write('%d,%d,%d,%d,%f\r\n' % (x1, y1, x2, y2, score))
-
-        for f in files:
-            with zipfile.ZipFile(os.path.join(directory, 'res/results.zip'), 'w') as zip:
-                zip.write(f)
-            os.remove(f)
+    for coco_id, boxes in struct.items():
+        file = os.path.join(directory, 'res/res_%d.txt' % coco_id)
+        with open(file, 'w') as f:
+            for res in boxes:
+                res = np.array(res)
+                res[[2, 3]] += res[:2]
+                x1, y1, x2, y2, score = res
+                f.write('%d,%d,%d,%d,%f\r\n' % (x1, y1, x2, y2, score))
