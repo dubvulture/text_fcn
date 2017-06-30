@@ -114,7 +114,7 @@ def coco_pipe(coco_text, in_dir, mode='validation'):
         ct_res = coco_text.loadRes(jsonarr)
         imgIds = [pred['image_id'] for pred in jsonarr]
         detections = coco_evaluation.getDetections(
-            coco_text, ct_res, imgIds=imgIds, detection_threshold=0.5)
+            coco_text, ct_res, imgIds=None, detection_threshold=0.5)
         coco_evaluation.printDetailedResults(coco_text, detections, None, 'FCN')
     elif mode == 'test':
         with open(os.path.join(directory, 'res/results.json'), 'r') as f:

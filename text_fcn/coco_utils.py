@@ -33,6 +33,7 @@ def coco_read_dataset(ct):
             if ct.anns[ann]['legibility'] == 'legible'
         )
     ]
+    val = ct.val
     test = [ct.imgs[i]['file_name'][:-4] for i in ct.test]
 
     return train, val, test
