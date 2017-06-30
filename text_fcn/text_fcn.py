@@ -147,7 +147,7 @@ class TextFCN(object):
         with self.sv.managed_session() as sess:
             for i, fname in enumerate(filenames):
                 in_path = os.path.join(directory, fname)
-                in_image = cv2.imread(in_path + '.png')
+                in_image = cv2.imread(in_path + '.jpg')
                 # pad image to the nearest multiple of 32
                 dy, dx = tf_utils.get_pad(in_image)
                 in_image = tf_utils.pad(in_image, dy, dx)
