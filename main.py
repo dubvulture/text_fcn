@@ -187,7 +187,7 @@ if __name__ == '__main__':
 
     elif args.mode == 'icdar':
         # After NN extract bboxes (orientated) and save for online evaluation
-        val_dir = '/home/manuel/Downloads/ICDAR2015/test/'
+        val_dir = '/home/manuel/text_fcn/ICDAR2015/'
         val = [i[:-4] for i in os.listdir(val_dir)]
         fcn.test(val, val_dir)
         icdar_pipe(args.logs_dir)
