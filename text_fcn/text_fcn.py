@@ -154,6 +154,7 @@ class TextFCN(object):
             for i, fname in enumerate(filenames):
                 in_path = os.path.join(directory, fname)
                 in_image = cv2.imread(in_path + '.jpg')
+                in_image = cv2.resize(in_image, None, fx=0.5, fy=0.5)
                 # pad image to the nearest multiple of 32
                 dy, dx = tf_utils.get_pad(in_image)
                 in_image = tf_utils.pad(in_image, dy, dx)
@@ -177,8 +178,8 @@ class TextFCN(object):
                     os.makedirs(out_dir)
 
                 pred = score_1 - score_2
-                pred[pred < 0.5] = 0
-                pred[pred >= 0.5] = 1
+                pred[pred < 0.65] = 0
+                pred[pred >= 0.65] = 1
                 tf_utils.save_image(
                     (pred * 255).astype(np.uint8),
                     out_dir,

@@ -21,7 +21,7 @@ def get_bboxes(image):
  
     # pad image in order to prevent closing "constriction"
     output = np.pad(image, (DIL, DIL), 'constant')
-    output = dilation(output, structure=ONES, iterations=1).astype(np.uint8)
+    output = dilation(output, structure=ONES, iterations=2).astype(np.uint8)
     # remove padding
     output = output[X:-X, X:-X]
     labels, num = label(output, structure=ONES)
@@ -64,12 +64,14 @@ def icdar_pipe(in_dir):
     fnames = os.listdir(directory)
  
     for fname in fnames:
+        if 'score' in fname:
+            continue
         image = cv2.imread(os.path.join(directory, fname))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        # image[image > 0] = 255 (this should not be needed)
         bboxes, scores = get_bboxes(image)
  
         if bboxes is not None:
+            bboxes *= 2
             out = os.path.join(directory, 'res_%s.txt' % fname[:-11])
             with open(out, 'w') as f:
                 for i in range(bboxes.shape[0]):
