@@ -175,14 +175,17 @@ class TextFCN(object):
                 my_pred = score[:,:,2] - score[:,:,1]
                 my_pred[my_pred < 0.6] = 0
                 my_pred[my_pred >= 0.6] = 1
+
+                out_name = fname[:-len(ext)] if len(ext) > 0 else fname
+
                 tf_utils.save_image(
                     (my_pred * 255).astype(np.uint8),
                     out_dir,
-                    name=fname[:(-4+len(ext))] + '_output')
+                    name=out_name + '_output')
                 tf_utils.save_image(
                     (score[:,:,2] * 255).astype(np.uint8),
                     out_dir,
-                    name=fname[:(-4+len(ext))] + '_scores')
+                    name=out_name + '_scores')
 
 
     def visualize(self, vis_set):
