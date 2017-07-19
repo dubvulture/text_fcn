@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from six.moves import range
 
@@ -181,16 +182,19 @@ class TextFCN(object):
                     os.makedirs(out_dir)
 
                 pred = score_1 - score_2
-                pred[pred < 0.5] = 0
-                pred[pred >= 0.5] = 1
+                pred[pred < 0.6] = 0
+                pred[pred >= 0.6] = 1
+
+                out_name = fname[-len(ext)] if len(ext) > 0 else fname
+
                 tf_utils.save_image(
                     (pred * 255).astype(np.uint8),
                     out_dir,
-                    name=fname[:(-4+len(ext))] + '_output')
+                    name=out_name + '_output')
                 tf_utils.save_image(
                     (score_1 * 255).astype(np.uint8),
                     out_dir,
-                    name=fname[:(-4+len(ext))] + '_scores')
+                    name=out_name + '_scores')
 
     def visualize(self, vis_set):
         """
