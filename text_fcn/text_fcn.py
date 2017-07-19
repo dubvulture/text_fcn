@@ -173,14 +173,16 @@ class TextFCN(object):
                 if not os.path.exists(out_dir):
                     os.makedirs(out_dir)
 
+                out_name = fname[:-len(ext)] if len(ext) > 0 else fname
+
                 tf_utils.save_image(
                     (output * 255).astype(np.uint8),
                     out_dir,
-                    name=fname[:(-4+len(ext))] + '_output')
+                    name=out_name + '_output')
                 tf_utils.save_image(
                     (score * 255).astype(np.uint8),
                     out_dir,
-                    name=fname[:(-4+len(ext))] + '_scores')
+                    name=out_name + '_scores')
 
     def visualize(self, vis_set):
         """
