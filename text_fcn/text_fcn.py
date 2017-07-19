@@ -1,5 +1,4 @@
 from __future__ import absolute_import
-from __future__ import division
 from __future__ import print_function
 from six.moves import range
 
@@ -174,8 +173,8 @@ class TextFCN(object):
                     os.makedirs(out_dir)
 
                 my_pred = score[:,:,2] - score[:,:,1]
-                my_pred[my_pred < 0.5] = 0
-                my_pred[my_pred >= 0.5] = 1
+                my_pred[my_pred < 0.6] = 0
+                my_pred[my_pred >= 0.6] = 1
                 tf_utils.save_image(
                     (my_pred * 255).astype(np.uint8),
                     out_dir,
