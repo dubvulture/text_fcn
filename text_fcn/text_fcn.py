@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from six.moves import range
 
@@ -137,17 +138,21 @@ class TextFCN(object):
                 if step == max_steps:
                     break
 
-    def test(self, filenames, directory):
+    def test(self, filenames, directory, ext=''):
         """
         Run on images in directory without their groundtruth
         (hence this should be used only during validation/testing phase)
         :param filenames:
         :param directory:
+        :param ext:
         """
         with self.sv.managed_session() as sess:
             for i, fname in enumerate(filenames):
                 in_path = os.path.join(directory, fname)
-                in_image = cv2.imread(in_path + '.jpg')
+                in_image = cv2.imread(in_path + ext)
+                ratio = 640 / np.amax(in_image.shape[:2])
+                ratio = ratio if ratio < 1 else 1
+                in_image = cv2.resize(in_image, None, fx=ratio, fy=ratio)
                 # pad image to the nearest multiple of 32
                 dy, dx = tf_utils.get_pad(in_image)
                 in_image = tf_utils.pad(in_image, dy, dx)
@@ -174,11 +179,11 @@ class TextFCN(object):
                 tf_utils.save_image(
                     (my_pred * 255).astype(np.uint8),
                     out_dir,
-                    name=fname + '_output')
+                    name=fname[:(-4+len(ext))] + '_output')
                 tf_utils.save_image(
                     (score[:,:,2] * 255).astype(np.uint8),
                     out_dir,
-                    name=fname + '_scores')
+                    name=fname[:(-4+len(ext))] + '_scores')
 
 
     def visualize(self, vis_set):

@@ -32,11 +32,15 @@ parser.add_argument('--train_freq', type=int, default=20, help='trace train_loss
 parser.add_argument('--val_freq', type=int, default=0, help='trace val_loss every val_freq')
 parser.add_argument('--id_list', help='text file containing images\' coco ids to visualize')
 parser.add_argument('--dataset', default='cocotext', choices=['cocotext', 'icdartext'], help='which dataset')
+parser.add_argument('--test_folder', help='')
 
 args = parser.parse_args()
 
 if args.id_list is None and args.mode == 'visualize':
     parser.error('--mode="visualize" requires --id_list')
+
+if args.test_folder is None and args.mode == 'test':
+    parser.error('--mode="test" requires --test_folder')
 
 assert args.image_size % 32 == 0,\
        'image size must be a multiple of 32'
@@ -175,19 +179,18 @@ if __name__ == '__main__':
         fcn.visualize(ids_set)
 
     elif args.mode == 'test':
-        # We just pass the ids
-        fcn.test(test, args.coco_dir)
+        test = os.listdir(args.test_folder)
+        fcn.test(test, args.test_folder, ext='')
 
     elif args.mode == 'coco':
         # After NN extract bboxes and evaluate with coco_text
-        dset = [chosen_text.imgs[coco_id]['file_name'][:-4] for coco_id in val]
-        #dset = test
-        fcn.test(dset, os.path.join(dataset_dir, 'images/'))
+        val = [chosen_text.imgs[coco_id]['file_name'][:-4] for coco_id in val]
+        fcn.test(val, os.path.join(dataset_dir, 'images/'), ext='.jpg')
         coco_pipe(chosen_text, args.logs_dir, mode='validation')
 
     elif args.mode == 'icdar':
         # After NN extract bboxes (orientated) and save for online evaluation
         val_dir = '/home/manuel/Downloads/ICDAR2015/test/'
         val = [i[:-4] for i in os.listdir(val_dir)]
-        fcn.test(val, val_dir)
+        fcn.test(val, val_dir, ext='.jpg')
         icdar_pipe(args.logs_dir)
