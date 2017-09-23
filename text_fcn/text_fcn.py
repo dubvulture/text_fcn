@@ -180,7 +180,7 @@ class TextFCN(object):
                 out_name = fname[:-len(ext)] if len(ext) > 0 else fname
 
                 output = cv2.resize(np.uint8(output * 255), original_shape)
-                score = cv2.resize(np.uint8(score_1 * 255), original_shape)
+                score = cv2.resize(np.uint8(score * 255), original_shape)
 
                 tf_utils.save_image(
                     output,
