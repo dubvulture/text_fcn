@@ -76,7 +76,6 @@ def icdar_pipe(in_dir, rotated=True):
         bboxes, scores = get_bboxes(image, rotated)
  
         if bboxes is not None:
-            bboxes *= 2
             n = 7 if rotated else 3
             out = os.path.join(directory, 'res_%s.txt' % fname[:-11])
             with open(out, 'w') as f:

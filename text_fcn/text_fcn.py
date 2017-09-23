@@ -148,9 +148,15 @@ class TextFCN(object):
         """
         with self.sv.managed_session() as sess:
             for i, fname in enumerate(filenames):
+                fname += ext
                 in_path = os.path.join(directory, fname)
-                in_image = cv2.imread(in_path + ext)
-                in_image = cv2.resize(in_image, None, fx=0.5, fy=0.5)
+                in_image = cv2.imread(in_path)
+
+                original_shape = in_image.shape[:2][::-1]
+                ratio = 640 / np.amax(original_shape)
+                ratio = ratio if ratio < 1 else 1
+                in_image = cv2.resize(in_image, None, fx=ratio, fy=ratio)
+                
                 # pad image to the nearest multiple of 32
                 dy, dx = tf_utils.get_pad(in_image)
                 in_image = tf_utils.pad(in_image, dy, dx)
@@ -173,12 +179,15 @@ class TextFCN(object):
 
                 out_name = fname[:-len(ext)] if len(ext) > 0 else fname
 
+                output = cv2.resize(np.uint8(output * 255), original_shape)
+                score = cv2.resize(np.uint8(score_1 * 255), original_shape)
+
                 tf_utils.save_image(
-                    (output * 255).astype(np.uint8),
+                    output,
                     out_dir,
                     name=out_name + '_output')
                 tf_utils.save_image(
-                    (score * 255).astype(np.uint8),
+                    score,
                     out_dir,
                     name=out_name + '_scores')
 

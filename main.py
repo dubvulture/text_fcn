@@ -197,5 +197,5 @@ if __name__ == '__main__':
     elif args.mode == 'icdar2013':
         val_dir = '/home/manuel/text_fcn/ICDAR2013/test/'
         val = [i[:-4] for i in os.listdir(val_dir)]
-        #fcn.test(val, val_dir)
+        fcn.test(val, val_dir, ext='.jpg')
         icdar_pipe(args.logs_dir, rotated=False)
