@@ -26,7 +26,7 @@ parser.add_argument('--batch_size', type=int, default=2, help='batch size for tr
 parser.add_argument('--max_steps', type=int, default=0, help='max steps to perform, 0 for infinity')
 parser.add_argument('--keep_prob', type=float, default=0.85, help='keep probability with dropout')
 parser.add_argument('--logs_dir', default='logs/temp/', help='path to logs directory')
-parser.add_argument('--mode', required=True, choices=['train', 'test', 'visualize', 'coco', 'icdar'])
+parser.add_argument('--mode', required=True, choices=['train', 'test', 'visualize', 'coco', 'icdar2015', 'icdar2013'])
 parser.add_argument('--save_freq', type=int, default=500, help='save model every save_freq')
 parser.add_argument('--train_freq', type=int, default=20, help='trace train_loss every train_freq')
 parser.add_argument('--val_freq', type=int, default=0, help='trace val_loss every val_freq')
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     # Visualize & Test & Coco require COCO_Text
     # Icdar is unbound
     if ((args.mode in ['train', 'test'] and args.dataset == 'cocotext')
-        or (args.mode in ['visualize', 'coco', 'icdar'])):
+        or (args.mode in ['visualize', 'coco', 'icdar2015', 'icdar2013'])):
         coco_utils.maybe_download_and_extract(dataset_dir, coco_utils.URL, is_zipfile=True)
         chosen_text = COCO_Text(os.path.join(dataset_dir, 'COCO_Text.json'))
         read_dataset = coco_utils.coco_read_dataset
@@ -184,9 +184,15 @@ if __name__ == '__main__':
         fcn.test(val, os.path.join(dataset_dir, 'images/'), ext='.jpg')
         coco_pipe(chosen_text, args.logs_dir, mode='validation')
 
-    elif args.mode == 'icdar':
+    elif args.mode == 'icdar2015':
         # After NN extract bboxes (orientated) and save for online evaluation
         val_dir = '/home/manuel/Downloads/ICDAR2015/test/'
         val = [i[:-4] for i in os.listdir(val_dir)]
         fcn.test(val, val_dir, ext='.jpg')
         icdar_pipe(args.logs_dir)
+
+    elif args.mode == 'icdar2013':
+        val_dir = '/home/manuel/text_fcn/ICDAR2013/test/'
+        val = [i[:-4] for i in os.listdir(val_dir)]
+        fcn.test(val, val_dir, ext='.jpg')
+        icdar_pipe(args.logs_dir, rotated=False)
