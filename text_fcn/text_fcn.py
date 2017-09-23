@@ -148,11 +148,15 @@ class TextFCN(object):
         """
         with self.sv.managed_session() as sess:
             for i, fname in enumerate(filenames):
+                fname += ext
                 in_path = os.path.join(directory, fname)
-                in_image = cv2.imread(in_path + ext)
-                ratio = 640 / np.amax(in_image.shape[:2])
+                in_image = cv2.imread(in_path)
+
+                original_shape = in_image.shape[:2][::-1]
+                ratio = 640 / np.amax(original_shape)
                 ratio = ratio if ratio < 1 else 1
                 in_image = cv2.resize(in_image, None, fx=ratio, fy=ratio)
+                
                 # pad image to the nearest multiple of 32
                 dy, dx = tf_utils.get_pad(in_image)
                 in_image = tf_utils.pad(in_image, dy, dx)
@@ -173,21 +177,23 @@ class TextFCN(object):
                 if not os.path.exists(out_dir):
                     os.makedirs(out_dir)
 
-                my_pred = score[:,:,2] - score[:,:,1]
-                my_pred[my_pred < 0.6] = 0
-                my_pred[my_pred >= 0.6] = 1
+                pred = score[:,:,2] - score[:,:,1]
+                pred[pred < 0.6] = 0
+                pred[pred >= 0.6] = 1
 
                 out_name = fname[:-len(ext)] if len(ext) > 0 else fname
 
+                pred = cv2.resize(np.uint8(pred * 255), original_shape)
+                score = cv2.resize(np.uint8(score[:,:,2] * 255), original_shape)
+
                 tf_utils.save_image(
-                    (my_pred * 255).astype(np.uint8),
+                    pred,
                     out_dir,
                     name=out_name + '_output')
                 tf_utils.save_image(
-                    (score[:,:,2] * 255).astype(np.uint8),
+                    score,
                     out_dir,
                     name=out_name + '_scores')
-
 
     def visualize(self, vis_set):
         """
