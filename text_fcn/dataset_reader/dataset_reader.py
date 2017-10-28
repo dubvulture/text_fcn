@@ -13,7 +13,7 @@ def shuffle_bgr(img):
 def rotate(img, angle):
     rows, cols = img.shape[:2]
     M = cv2.getRotationMatrix2D((cols // 2, rows // 2), angle, 1)
-    return cv2.warpAffine(img, M, (cols, rows))
+    return cv2.warpAffine(img, M, (cols, rows), flags=cv2.INTER_NEAREST)
 
 
 class BatchDataset(object):
@@ -23,7 +23,7 @@ class BatchDataset(object):
                  batch_size,
                  image_size,
                  image_op=None,
-                 augment_data=True):
+                 augment_data=False):
         """
         Intialize a generic file reader with batching for list of files
         :param names: list of ids/names/files for the dataset reader
