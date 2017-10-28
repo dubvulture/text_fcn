@@ -50,7 +50,8 @@ class IcdarDataset(BatchDataset):
         """
         # crop only when crop_size if given AND images are not loaded from disk
         crop_fun = self._crop_resize if crop else None
-        BatchDataset.__init__(self, fnames, batch_size, image_size, image_op=crop_fun)
+        BatchDataset.__init__(self, fnames, batch_size, image_size,
+                              image_op=crop_fun, augment_data=augment_data)
 
         self.dt = dt
         self.icdar_dir = icdar_dir
