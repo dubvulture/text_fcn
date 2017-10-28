@@ -2,12 +2,28 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import cv2
 import numpy as np
+
+
+def shuffle_bgr(img):
+    return np.random.permutation(img.transpose(2,0,1)).transpose(1,2,0)
+
+
+def rotate(img, angle):
+    rows, cols = img.shape[:2]
+    M = cv2.getRotationMatrix2D((cols // 2, rows // 2), angle, 1)
+    return cv2.warpAffine(img, M, (cols, rows), flags=cv2.INTER_NEAREST)
 
 
 class BatchDataset(object):
 
-    def __init__(self, names, batch_size, image_size, image_op=None):
+    def __init__(self,
+                 names,
+                 batch_size,
+                 image_size,
+                 image_op=None,
+                 augment_data=False):
         """
         Intialize a generic file reader with batching for list of files
         :param names: list of ids/names/files for the dataset reader
@@ -25,6 +41,7 @@ class BatchDataset(object):
         self.image_size = image_size
         # image_op passed to constructor or identity function
         self.image_op = image_op or (lambda *args, **kwargs: args)
+        self.augment_data = augment_data
 
         if batch_size == 1:
             self._read_batch = self._simple_read
@@ -75,6 +92,10 @@ class BatchDataset(object):
 
         for i, name in enumerate(self.names[pos]):
             image, annotation, weight = self.image_op(*self._get_image(name), name=name)
+            if self.augment_data:
+                angle = np.random.randint(-45, 46)
+                image = rotate(image, angle)
+                annotation = rotate(annotation, angle)
             images[i] = image
             annotations[i] = annotation[:, :, None]
             weights[i] = weight[:, :, None]
@@ -92,7 +113,10 @@ class BatchDataset(object):
         assert ((pos.stop - pos.start) == 1 == self.batch_size)
         name = self.names[pos][0]
         image, annotation, weight = self.image_op(*self._get_image(name), name=name)
-
+        if self.augment_data:
+            angle = np.random.randint(-45, 46)
+            image = rotate(image, angle)
+            annotation = rotate(annotation, angle)
         # Add batch_dim + convert to floating point in [0,1]
         image = np.expand_dims(image, axis=0)
         # [None,:,:,None] ==> expand_dims(_, axis=[0,3]) // syntax not supported

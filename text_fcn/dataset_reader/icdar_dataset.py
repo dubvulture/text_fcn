@@ -20,7 +20,8 @@ class IcdarDataset(BatchDataset):
                  batch_size,
                  image_size,
                  crop=False,
-                 pre_saved=False):
+                 pre_saved=False,
+                 augment_data=False):
         """
         :param fnames:
         :param dt: ICDAR2015 npy loaded
@@ -49,7 +50,8 @@ class IcdarDataset(BatchDataset):
         """
         # crop only when crop_size if given AND images are not loaded from disk
         crop_fun = self._crop_resize if crop else None
-        BatchDataset.__init__(self, fnames, batch_size, image_size, image_op=crop_fun)
+        BatchDataset.__init__(self, fnames, batch_size, image_size,
+                              image_op=crop_fun, augment_data=augment_data)
 
         self.dt = dt
         self.icdar_dir = icdar_dir
@@ -67,11 +69,8 @@ class IcdarDataset(BatchDataset):
         :return: image, its groundtruth, and its weights
         """
         filename = fname + '.png'
-        if self.dt[fname]['set'] == 'test':
-            filename = 't_' + filename
-
         image = cv2.imread(
-            os.path.join(self.icdar_dir, filename)
+            os.path.join(self.icdar_dir, 'images/', filename)
         )
         annotation = np.zeros(image.shape[:-1], dtype=np.uint8)
         weight = np.ones(annotation.shape, np.float32)
@@ -86,8 +85,6 @@ class IcdarDataset(BatchDataset):
         Load image already saved on the disk
         """
         filename = fname + '.png'
-        if self.dt[fname]['set'] == 'test':
-            filename = 't_' + filename
 
         image = cv2.imread(
             os.path.join(self.icdar_dir, 'images/', filename))

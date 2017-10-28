@@ -20,7 +20,8 @@ class SynthDataset(BatchDataset):
                      batch_size,
                      image_size,
                      crop=False,
-                     pre_saved=False):
+                     pre_saved=False,
+                     augment_data=False):
             """
             :param fnames:
             :param st:
