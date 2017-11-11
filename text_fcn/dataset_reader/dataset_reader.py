@@ -69,7 +69,7 @@ class BatchDataset(object):
         size = self.image_size
 
         images = np.zeros((n, size, size, 3), dtype=np.uint8)
-        annotations = np.zeros((n, size, size, 2), dtype=np.uint8)
+        annotations = np.zeros((n, size, size, 3), dtype=np.uint8)
         weights = np.zeros((n, size, size, 1), dtype=np.float32)
         names = np.zeros(n, dtype=object)
 

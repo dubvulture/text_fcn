@@ -66,29 +66,26 @@ class IcdarDataset(BatchDataset):
         :param fname: image filename
         :return: image, its groundtruth, and its weights
         """
-        filename = fname + '.png'
+        filename = fname + '.jpg'
 
         image = cv2.imread(
             os.path.join(self.icdar_dir, 'images/', filename)
         )
-        ann_fst = np.zeros(image.shape[:-1], dtype=np.uint8)
-        ann_snd = np.zeros(image.shape[:-1], dtype=np.uint8)
-        weight = np.ones(ann_fst.shape, np.float32)
+        annotation = np.zeros(image.shape[:-1], np.int32)
+        instance = np.zeros((image.shape[0], image.shape[1], 2), np.int32)
+        weight = np.ones(annotation.shape, np.float32)
 
-        for poly in self.dt[fname]['words']:
+        for i, poly in enumerate(self.dt[fname]['words']):
             poly = np.int32(poly)
-            # Draw text area
-            cv2.fillConvexPoly(ann_fst, poly, 255)
+            cv2.fillConvexPoly(annotation, poly, i+1)
+            m = cv2.moments(poly)
+            centroid = np.int32([m['m01'], m['m10']]) // np.int32(m['m00'])
+            pos = np.where(annotation == i+1)
+            instance[pos] = centroid - np.transpose(pos)
 
-        for poly in self.dt[fname]['words']:
-            poly = np.int32(poly)
-            bbox = cv2.boundingRect(np.expand_dims(poly, axis=1))
-            # thickness = minimum between 10% height and width
-            thick = int(max(2, np.min(np.array(bbox[2:]) * 0.1)))
-            # Draw bounding box
-            cv2.drawContours(ann_snd, poly.reshape((1,4,1,2)), -1, 127, thickness=thick)
+        annotation[annotation > 0] = 255
 
-        return [image, np.dstack((ann_fst, ann_snd)), weight]
+        return [image, np.dstack((annotation, instance)), weight]
 
     def _load_image(self, fname):
         """

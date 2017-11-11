@@ -162,39 +162,25 @@ def crop_resize(images, window, size):
     :param size: resize size (square)
     :return: cropped images
     """
-    pad = [((0, 0),), (), ()]
-    interp = [cv2.INTER_CUBIC, cv2.INTER_NEAREST, cv2.INTER_NEAREST]
-    dsize = (size, size)
-    value = [0.0, 0.0, 1.0]
+    cut = lambda x, p, v: np.pad(x[window['slice']],
+                                 window['pad'] + p,
+                                 'constant',
+                                 constant_values=v)
+    resize = lambda x, i: cv2.resize(x, (size, size), interpolation=i)
+    dy = window['slice'][0].stop - window['slice'][0].start
+    dy += window['pad'][0][0] + window['pad'][0][1]
+    dx = window['slice'][1].stop - window['slice'][1].start
+    dx += window['pad'][1][0] + window['pad'][1][1]
+    yratio = dy / size
+    xratio = dx / size
 
-    images[0] = images[0][window['slice']]
-    images[0] = np.pad(images[0],
-                        window['pad'] + pad[0],
-                        'constant',
-                        constant_values=value[0])
-    images[0] = cv2.resize(images[0], dsize, interpolation=interp[0])
+    images[0] = resize(cut(images[0], ((0, 0),), 0.0), cv2.INTER_CUBIC)
+    
+    ann_fst = resize(cut(images[1][:,:,0], (), 0.0), cv2.INTER_NEAREST)
+    ann_snd = resize(cut(images[1][:,:,1], (), 0.0), cv2.INTER_NEAREST) / yratio
+    ann_trd = resize(cut(images[1][:,:,2], (), 0.0), cv2.INTER_NEAREST) / xratio
+    images[1] = np.dstack((ann_fst, np.int32(ann_snd), np.int32(ann_trd)))
 
-    ann_fst = images[1][:,:,0][window['slice']]
-    ann_fst = np.pad(ann_fst,
-                     window['pad'] + pad[1],
-                     'constant',
-                     constant_values=value[1])
-    ann_fst = cv2.resize(ann_fst, dsize, interpolation=interp[1])
-
-    ann_snd = images[1][:,:,1][window['slice']]
-    ann_snd = np.pad(ann_snd,
-                     window['pad'] + pad[1],
-                     'constant',
-                     constant_values=value[1])
-    ann_snd = cv2.resize(ann_snd, dsize, interpolation=interp[1])
-
-    images[1] = np.dstack((ann_fst, ann_snd))
-
-    images[2] = images[2][window['slice']]
-    images[2] = np.pad(images[2],
-                       window['pad'] + pad[2],
-                       'constant',
-                       constant_values=value[2])
-    images[2] = cv2.resize(images[2], dsize, interpolation=interp[2])
+    images[2] = resize(cut(images[2], (), 1.0), cv2.INTER_NEAREST)
 
     return images

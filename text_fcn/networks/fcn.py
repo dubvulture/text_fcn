@@ -11,7 +11,7 @@ def create_fcn(placeholder, keep_prob, classes):
     """
     Setup the main conv/deconv network
     """
-    with tf.variable_scope('inference'):
+    with tf.variable_scope('FCN8'):
         vgg_net = create_vgg_net(placeholder)
         conv_final = vgg_net['conv5_4']
         output = tf_utils.max_pool_2x2(conv_final)
@@ -31,54 +31,43 @@ def create_fcn(placeholder, keep_prob, classes):
             tf_utils.add_activation_summary(output, collections=['train'])
             output = tf.nn.dropout(output, keep_prob=keep_prob)
 
-        conv_shape = [1, 1, 4096, classes]
-
         pool4 = vgg_net['pool4']
         pool3 = vgg_net['pool3']
-
-        deconv_shapes = [
-            tf.shape(pool4),
-            tf.shape(pool3),
-            tf.stack([
-                tf.shape(placeholder)[0], tf.shape(placeholder)[1],
-                tf.shape(placeholder)[2], classes
-            ])
-        ]
 
         W_shapes = [
             [4, 4, pool4.get_shape()[3].value, classes],
             [4, 4, pool3.get_shape()[3].value, pool4.get_shape()[3].value],
-            [16, 16, classes, pool3.get_shape()[3].value]
         ]
+        deconv_shapes = [tf.shape(pool4), tf.shape(pool3)]
 
-        b_shapes = [[shape[2]] for shape in W_shapes]
-
-        strides = [2, 2, 8]
-
+        out_channels = [classes, 2]
         branch = [None, None]
         pred = [None, None]
 
-        for i in range(2):
-            with tf.variable_scope('conv8_branch%d' % (i + 1)):
-                W = tf_utils.weight_variable(conv_shape)
-                b = tf_utils.bias_variable(conv_shape[-1:])
+        for i, t in enumerate(['semantic', 'instance']):
+            with tf.variable_scope('conv8_%s' % t):
+                W = tf_utils.weight_variable([1, 1, 4096, out_channels[i]])
+                b = tf_utils.bias_variable([out_channels[i]])
                 branch[i] = tf_utils.conv2d_basic(output, W, b)
 
-            for j in range(3):
-                with tf.variable_scope('deconv%d_branch%d' % (j + 1, i + 1)):
+            for j in range(2):
+                with tf.variable_scope('deconv%d_%s' % (j + 1, t)):
                     W = tf_utils.weight_variable(W_shapes[j])
-                    b = tf_utils.bias_variable(b_shapes[j])
+                    b = tf_utils.bias_variable([W_shapes[j][2]])
                     branch[i] = tf_utils.conv2d_transpose_strided(
                         branch[i], W, b,
-                        output_shape=deconv_shapes[j], stride=strides[j])
-                if j < 2:
-                    with tf.variable_scope('skip%d_branch%d' % (j + 1, i + 1)):
-                        branch[i] = tf.add(branch[i], vgg_net['pool%d' % (4 - j)])
+                        output_shape=deconv_shapes[j], stride=2)
+                with tf.variable_scope('skip%d_%s' % (j + 1, t)):
+                    branch[i] = tf.add(branch[i], vgg_net['pool%d' % (4 - j)])
 
-            with tf.variable_scope('prediction_%d' % (i + 1)):
-                pred[i] = tf.argmax(branch[i], dimension=3)
+            with tf.variable_scope('deconv3_%s' % t):
+                W = tf_utils.weight_variable([16, 16, out_channels[i], pool3.get_shape()[3].value])
+                b = tf_utils.bias_variable([out_channels[i]])
+                branch[i] = tf_utils.conv2d_transpose_strided(
+                        branch[i], W, b,
+                        output_shape=tf.stack([
+                            tf.shape(placeholder)[0], tf.shape(placeholder)[1],
+                            tf.shape(placeholder)[2], out_channels[i]]),
+                        stride=8)
 
-    return (
-        tf.expand_dims(pred[0], dim=3), branch[0],
-        tf.expand_dims(pred[1], dim=3), branch[1]
-    )
+    return branch

@@ -37,25 +37,26 @@ class TextFCN(object):
         self.image = tf.placeholder(
             tf.float32, shape=[None, None, None, 3], name='image')
         self.annotation = tf.placeholder(
-            tf.int32, shape=[None, None, None, 2], name='annotation')
+            tf.int32, shape=[None, None, None, 3], name='annotation')
         self.weight = tf.placeholder(
             tf.float32, shape=[None, None, None, 1], name='weight')
 
-        p1, l1, p2, l2 = create_fcn(self.image, self.keep_prob, 2)
+        self.semantic_var = tf.Variable(1.0, name='semantic_var')
+        self.instance_var = tf.Variable(1.0, name='instance_var')
 
-        self.prediction = [p1, p2]
-        self.logits = [l1, l2]
-
-        self.score = [
-            tf.nn.softmax(self.logits[0]),
-            tf.nn.softmax(self.logits[1])
-        ]
+        self.semantic, self.instance = create_fcn(self.image, self.keep_prob, 2)
+        self.semantic_score = tf.nn.softmax(self.semantic)
+        self.semantic_pred = tf.argmax(self.semantic, dimension=3)
 
         global_step = tf.Variable(0, name='global_step', trainable=False)
-        self.loss_op = self._loss()
+        self.losses = self._loss()
         self.train_op = self._training(lr, global_step)
 
-        tf.summary.scalar('train_loss', self.loss_op, collections=['train'])
+        tf.summary.scalar('train_loss', self.losses[0], collections=['train'])
+        tf.summary.scalar('semantic_loss', self.losses[1], collections=['train'])
+        tf.summary.scalar('instance_loss', self.losses[2], collections=['train'])
+        tf.summary.scalar('semantic_var', self.semantic_var, collections=['train'])
+        tf.summary.scalar('instance_var', self.instance_var, collections=['train'])
         for var in tf.trainable_variables():
             tf.summary.histogram(var.op.name, var, collections=['train'])
 
@@ -95,11 +96,13 @@ class TextFCN(object):
                 step = sess.run(self.sv.global_step)
 
                 if (step == max_steps) or ((step % self.train_freq) == 0):
-                    loss, summary = sess.run(
-                        [self.loss_op, self.summ_train],
+                    losses, summary = sess.run(
+                        [self.losses, self.summ_train],
                         feed_dict=feed)
                     self.sv.summary_computed(sess, summary, step)
-                    print('Step %d\tTrain_loss: %g' % (step, loss))
+                    print('Step %d\tLoss: %g' % (step, losses[0]), end='\t')
+                    print('(Semantic: %g,' % losses[1], end='')
+                    print(' Instance: %g)' % losses[2])
 
                 if ((val_set is not None) and (self.val_freq > 0) and
                         (((step % self.val_freq) == 0) or (step == max_steps))):
@@ -120,8 +123,8 @@ class TextFCN(object):
                             self.keep_prob: 1.0
                         }
                         # no backpropagation
-                        loss = sess.run(self.loss_op, feed_dict=feed)
-                        mean_loss += loss
+                        losses = sess.run(self.losses, feed_dict=feed)
+                        mean_loss += loss[0]
 
                     self.summ_val.value[0].simple_value = mean_loss / iters
                     self.sv.summary_computed(sess, self.summ_val, step)
@@ -133,13 +136,6 @@ class TextFCN(object):
                     # Save model
                     self.sv.saver.save(sess, self.logs_dir + 'model.ckpt', step)
                     print('Step %d\tModel saved.' % step)
-                    # Save train & set dataset state
-                    dill.dump(
-                        train_set,
-                        open(os.path.join(self.logs_dir, 'train_set.pkl'), 'wb'))
-                    dill.dump(
-                        val_set,
-                        open(os.path.join(self.logs_dir, 'val_set.pkl'), 'wb'))
 
                 if step == max_steps:
                     break
@@ -171,7 +167,10 @@ class TextFCN(object):
                 in_image = in_image.astype(np.float32) / 255.
 
                 feed = {self.image: in_image, self.keep_prob: 1.0}
-                pred, score = sess.run([self.prediction, self.score], feed_dict=feed)
+                pred, score, inst = sess.run([self.semantic_score,
+                                              self.semantic_pred,
+                                              self.instance],
+                                             feed_dict=feed)
                 print('Evaluated image\t' + fname)
 
                 # squeeze dims and undo padding
@@ -233,16 +232,18 @@ class TextFCN(object):
                     self.annotation: anns,
                     self.keep_prob: 1.0
                 }
-                preds, score = sess.run([self.prediction, self.score], feed_dict=feed)
+                preds, score, inst = sess.run([self.semantic_pred,
+                                               self.semantic_score,
+                                               self.instance],
+                                              feed_dict=feed)
                 # squeeze dims and undo padding
                 dy = preds[0].shape[1] - dy
                 dx = preds[0].shape[2] - dx
-                pred_1 = np.squeeze(preds[0], axis=(0,3))[:dy, :dx]
-                pred_2 = np.squeeze(preds[1], axis=(0,3))[:dy, :dx]
-                ann_1 = np.squeeze(anns[:,:,:,:1], axis=(0,3))[:dy, :dx]
-                ann_2 = np.squeeze(anns[:,:,:,1:], axis=(0,3))[:dy, :dx]
-                score_1 = np.squeeze(score[0], axis=0)[:dy, :dx, 1]
-                score_2 = np.squeeze(score[1], axis=0)[:dy, :dx, 1]
+                
+                text_preds = np.squeeze(preds, axis=(0,3))[:dy, :dx]
+                text_score = np.squeeze(score, axis=(0,3))[:dy, :dx]
+                inst_ys = np.squeeze(inst[:,:,:,:1], axis=(0,3))[:dy, :dx]
+                inst_xs = np.squeeze(inst[:,:,:,1:], axis=(0,3))[:dy, :dx]
                 images = np.squeeze(images, axis=0)[:dy, :dx]
                 coco_ids = np.squeeze(coco_ids, axis=0)
 
@@ -251,43 +252,24 @@ class TextFCN(object):
                     os.makedirs(out_dir)
 
                 tf_utils.save_image(
-                    (images * 255).astype(np.uint8),
+                    np.uint8(images * 255),
                     out_dir,
                     name='input_%05d' % coco_ids)
                 tf_utils.save_image(
-                    (ann_1 * 255).astype(np.uint8),
+                    np.uint8(text_preds * 255),
                     out_dir,
-                    name='gt_text_%05d' % coco_ids)
+                    name='text_pred_%05d' % coco_ids)
                 tf_utils.save_image(
-                    (ann_2 * 255).astype(np.uint8),
+                    np.uint8(score * 255),
                     out_dir,
-                    name='gt_bbox_%05d' % coco_ids)
+                    name='text_score_%05d' % coco_ids)
+                pos = np.where(text_preds > 0)
+                stacked = np.hstack((inst_ys[pos] + pos[0], inst_xs[pos] + pos[1]))
+                stacked[stacked != 0] = 255
                 tf_utils.save_image(
-                    (pred_1 * 255).astype(np.uint8),
+                    np.uint8(stacked),
                     out_dir,
-                    name='pred_text_%05d' % coco_ids)
-                tf_utils.save_image(
-                    (pred_2 * 255).astype(np.uint8),
-                    out_dir,
-                    name='pred_bbox_%05d' % coco_ids)
-                tf_utils.save_image(
-                    (score_1 * 255).astype(np.uint8),
-                    out_dir,
-                    name='probs_text_%05d' % coco_ids)
-                tf_utils.save_image(
-                    (score_2 * 255).astype(np.uint8),
-                    out_dir,
-                    name='probs_bbox_%05d' % coco_ids)
-
-                pred = score_1 - score_2
-                pred[pred < 0.5] = 0
-                pred[pred >= 0.5] = 1
-                tf_utils.save_image(
-                    (pred * 255).astype(np.uint8),
-                    out_dir,
-                    name='pred_%05d' % coco_ids)
-
-                print('Saved image: %d' % coco_ids)
+                    name='instances_%05d' % coco_ids)
 
     def _training(self, lr, global_step):
         """
@@ -296,24 +278,32 @@ class TextFCN(object):
         :param global_step: global step of training
         """
         optimizer = tf.train.AdamOptimizer(lr)
-        grads = optimizer.compute_gradients(self.loss_op)
+        grads = optimizer.compute_gradients(self.losses[0])
         return optimizer.apply_gradients(grads, global_step=global_step)
 
     def _loss(self):
         """
         Setup the loss function
         """
-        loss_1 = tf.reduce_mean(
-            tf.losses.sparse_softmax_cross_entropy(
-                logits=self.logits[0],
-                labels=self.annotation[:,:,:,:1],
-                weights=self.weight))
-        loss_2 = tf.reduce_mean(
-            tf.losses.sparse_softmax_cross_entropy(
-                logits=self.logits[1],
-                labels=self.annotation[:,:,:,1:2],
-                weights=self.weight))
-        return (loss_1 + loss_2) / 2.
+        semantic_loss = tf.reduce_mean(
+                tf.losses.sparse_softmax_cross_entropy(
+                    logits=self.semantic,
+                    labels=self.annotation[:,:,:,:1],
+                    weights=self.weight),
+                name='semantic_loss')
+        instance_loss = tf.reduce_mean(
+                tf.losses.absolute_difference(
+                    labels=tf.to_float(self.annotation[:,:,:,1:]),
+                    predictions=self.instance,
+                    weights=tf.squeeze(
+                        tf.stack((self.weight,)*2, axis=3),
+                        axis=4)),
+                name='instance_loss')
+        # multi-task loss -> https://arxiv.org/pdf/1705.07115.pdf
+        mtl = lambda l, o: (l / (2 * o**2)) + tf.log(o**2)
+        loss = mtl(semantic_loss, self.semantic_var) \
+             + mtl(instance_loss, self.instance_var)
+        return [loss, semantic_loss, instance_loss]
 
     def _setup_supervisor(self, checkpoint):
         """
